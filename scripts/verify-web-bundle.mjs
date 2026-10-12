@@ -23,4 +23,8 @@ assert.ok(js.includes('mapAimChangeMap'),'Map selector missing from Vite bundle'
 assert.ok(js.includes('mapWorldSelect')&&js.includes('mapCatalogStatus'),'Multi-world interface missing');
 assert.ok(js.includes('drawMinimumRange')||js.includes('Красная заливка'),
  'Minimum firing range zone missing from Vite bundle');
+assert.ok(js.includes('mapAimAddCustomWorld')&&js.includes('mapCustomWorldSize'),
+ 'Manual server world-size mode missing');
+assert.ok(js.includes('mapServerPreset')&&js.includes('mapAimChangeMap'),
+ 'ULTRV/AHS map preset controls missing');
 console.log('OK: interactive map code is present in Vite bundle');

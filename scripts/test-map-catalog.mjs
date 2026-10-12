@@ -11,3 +11,7 @@ assert.equal(items.length,3);assert.equal(items[1].worldSize,4096);
 assert.equal(normalizeMapListing({ok:true,data:{maps:[{slug:'new',worldSize:4500}]}}).length,1);
 assert.throws(()=>validateMapDimensions(0));
 console.log('OK: multiple Reforger map sizes and online catalogue validation.');
+
+const gridOnly=FALLBACK_REFORGER_MAPS.find(x=>x.slug==='zarichne');
+assert.ok(gridOnly&&gridOnly.worldSize===4095);
+console.log('OK: Zarichne exists as a GRID-capable fallback, not a guaranteed live tile map.');

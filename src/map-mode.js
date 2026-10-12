@@ -11,30 +11,54 @@ let ready=false,drag=null,onlineInfo=null,onlineState='loading',onlineRequest=0;
 let tileProbeToken=-1, tileProbe=null, tileWatchdog=null, offlineReason='';
 const mapEndpoint='https://enfumap.com';
 
-const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,item]));
+const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,{...item,online:null}]));
+let catalogVerified=false;
 const mapMeta=slug=>mapCatalogue.get(slug)||FALLBACK_REFORGER_MAPS[0];
 const selectedMap=()=>mapMeta(st().mapSlug);
+function isGridOnlyMap(slug){
+ const item=mapCatalogue.get(slug);
+ return item?.online===false && (catalogVerified||item.manual===true||item.checked===true);
+}
 function updateMapMenu(){
  const field=$('mapWorldSelect');if(!field)return;
  const active=st().mapSlug;
- const options=Array.from(mapCatalogue.values()).sort((a,b)=>{
+ const items=Array.from(mapCatalogue.values()).sort((a,b)=>{
   if(a.slug==='everon')return -1;if(b.slug==='everon')return 1;
   if(a.slug==='arland')return -1;if(b.slug==='arland')return 1;
+  if(a.online===true&&b.online!==true)return -1;
+  if(a.online!==true&&b.online===true)return 1;
   return a.name.localeCompare(b.name,'ru');
  });
- field.replaceChildren(...options.map(item=>{
-  const option=document.createElement('option');
-  option.value=item.slug;
-  option.textContent=item.name+' · '+Math.round(item.worldSize).toLocaleString('ru-RU')+' м';
-  return option;
- }));
- field.value=active;
+ const groups=[
+  {text:'🌐 Онлайн-подложки Enfumap',filter:m=>m.online===true},
+  {text:'▦ Только GRID / изображение пользователя',filter:m=>m.online===false},
+  {text:'? Доступность пока не проверена',filter:m=>m.online===null}
+ ];
+ const nodes=[];
+ for(const group of groups){
+  const list=items.filter(group.filter);
+  if(!list.length)continue;
+  const optgroup=document.createElement('optgroup');optgroup.label=group.text;
+  for(const item of list){
+   const option=document.createElement('option');
+   option.value=item.slug;
+   option.textContent=item.name+' · '+Math.round(item.worldSize).toLocaleString('ru-RU')+' м'+
+    (item.online===true?' · онлайн':item.online===false?' · GRID':' · проверить');
+   optgroup.append(option);
+  }
+  nodes.push(optgroup);
+ }
+ field.replaceChildren(...nodes);field.value=active;
  const label=$('mapWorldInfo'),meta=mapMeta(active);
  if(label)label.textContent=meta.name+' · '+Math.round(S).toLocaleString('ru-RU')+
   ' × '+Math.round(S).toLocaleString('ru-RU')+' м'+
-  (meta.author?' · '+meta.author:'')+'.';
+  (meta.online===true?' · подложка Enfumap':meta.online===false?' · только GRID':' · доступность подложки не проверена')+
+  (meta.author?' · автор: '+meta.author:'')+'.';
  const count=$('mapCatalogStatus');
- if(count)count.textContent=options.length+' карт в списке · онлайн-каталог обновляется автоматически';
+ const countOnline=items.filter(m=>m.online===true).length;
+ if(count)count.textContent=catalogVerified
+  ?countOnline+' онлайн · '+(items.length-countOnline)+' GRID / свои карты'
+  :'Не удалось проверить онлайн-каталог · карты GRID доступны';
 }
 async function discoverMaps(){
  try{
@@ -45,13 +69,85 @@ async function discoverMaps(){
   if(!response.ok)throw Error('HTTP '+response.status);
   const maps=normalizeMapListing(await response.json());
   if(maps.length<2)throw Error('Список карт пуст');
-  for(const item of maps)mapCatalogue.set(item.slug,{...mapMeta(item.slug),...item});
+  catalogVerified=true;
+  for(const [slug,item] of mapCatalogue){
+   mapCatalogue.set(slug,{...item,online:item.manual?false:false});
+  }
+  for(const item of maps){
+   mapCatalogue.set(item.slug,{...mapCatalogue.get(item.slug),...item,online:true,checked:true});
+  }
+  // The official island is called "Kolguyev" in Enfumap, not "Kolguev".
+  if(mapCatalogue.get('kolguyev')?.online===true){
+   if(st().mapSlug==='kolguev'){
+    const a=st();a.mapSlug='kolguyev';a.worldSize=mapMeta('kolguyev').worldSize;
+    opPersist();
+   }
+   mapCatalogue.delete('kolguev');
+  }
   updateMapMenu();
+  if(isGridOnlyMap(st().mapSlug)&&st().layer!=='grid'&&!st().image){
+   const a=st();a.preferredOnlineLayer=a.layer;a.mapAutoOffline=true;a.layer='grid';
+   offlineReason='У '+selectedMap().name+' нет опубликованной онлайн-подложки в Enfumap';
+   onlineState='offline';++onlineRequest;finishTileProbe();
+   $('mapAimLayer').value='grid';opPersist();render();onlineLabel();
+  }
  }catch(error){
-  if($('mapCatalogStatus'))$('mapCatalogStatus').textContent=
-   FALLBACK_REFORGER_MAPS.length+' предустановленные карты · онлайн-каталог недоступен';
+  catalogVerified=false;updateMapMenu();
  }
 }
+function installServerPresets(){
+ const select=$('mapServerPreset');if(!select)return;
+ const names=[
+  ['','Выбрать карту сервера…'],
+  ['ultrv-bakhmut-city','ULTRV · Бахмут (Bakhmut City, онлайн)'],
+  ['ultrv-kunar-province','ULTRV · Kunar Province (онлайн)'],
+  ['ahs-strelechye','AHS · Strelechye (свой размер / GRID)'],
+  ['ahs-sergeevka','AHS · Sergeevka (свой размер / GRID)'],
+  ['ultrv-chasov-yar','ULTRV · Chasov Yar (свой размер / GRID)']
+ ];
+ select.replaceChildren(...names.map(([v,label])=>{
+  const option=document.createElement('option');option.value=v;option.textContent=label;return option;
+ }));
+}
+window.mapAimSelectServerPreset=key=>{
+ const input=$('mapCustomWorldSize'),name=$('mapCustomWorldName');
+ if(key==='ultrv-bakhmut-city'||key==='ultrv-kunar-province'){
+  const slug=key==='ultrv-bakhmut-city'?'bakhmut-city':'kunar-province';
+  const title=key==='ultrv-bakhmut-city'?'Bakhmut City · ULTRV':'Kunar Province · ULTRV';
+  const worldSize=key==='ultrv-bakhmut-city'?10240:4096;
+  if(!mapCatalogue.has(slug))mapCatalogue.set(slug,{slug,name:title,worldSize,online:null});
+  updateMapMenu();window.mapAimChangeMap(slug);
+  status('Сценарий ULTRV: '+title+'. Онлайн-слой загружается с Enfumap.','mapAimInstruction');
+  return;
+ }
+ const descriptions={
+  'ahs-strelechye':'AHS · Strelechye',
+  'ahs-sergeevka':'AHS · Sergeevka',
+  'ultrv-chasov-yar':'ULTRV · Chasov Yar'
+ };
+ if(descriptions[key]){
+  name.value=descriptions[key];input.value='';
+  status('Для '+descriptions[key]+' сначала введите проверенный размер игровой карты в метрах.','mapAimInstruction');
+ }
+};
+window.mapAimAddCustomWorld=()=>{
+ const title=$('mapCustomWorldName')?.value.trim();
+ const raw=$('mapCustomWorldSize')?.value.trim();
+ const feedback=$('mapCustomWorldStatus');
+ if(!title||!raw){feedback.textContent='Введите название и размер игрового мира (в метрах).';return;}
+ let size;try{size=validateMapDimensions(raw);}catch{feedback.textContent='Укажите реальную длину стороны карты в игровых метрах (1000–100000).';return;}
+ const slug='custom-'+Date.now().toString(36);
+ const entry={slug,name:title.slice(0,64),worldSize:size,online:false,checked:true,manual:true};
+ mapCatalogue.set(slug,entry);
+ window.mapAimChangeMap(slug);
+ const state=st();state.manualMap=entry;state.layer='grid';state.mapAutoOffline=true;
+ offlineReason='Серверная карта без опубликованной онлайн-подложки';
+ offlineReason='Серверная карта · собственная GRID-сетка';
+ onlineState='offline';
+ $('mapAimLayer').value='grid';opPersist();updateMapMenu();onlineLabel();render();
+ feedback.textContent='Карта '+entry.name+' создана · '+size+' м. При необходимости импортируйте своё изображение карты и откалибруйте по GRID.';
+};
+
 function clearWorldCoordinates(){
  for(const id of ['artX','artY','tgtX','tgtY','artZ','tgtZ']){
   const input=$(id);
@@ -63,6 +159,12 @@ function clearWorldCoordinates(){
 window.mapAimChangeMap=slug=>{
  if(!mapCatalogue.has(slug))return;
  const a=st();if(a.mapSlug===slug)return;
+ if(a.mapAutoOffline===true&&mapMeta(slug).online!==false){
+  a.layer=a.preferredOnlineLayer||'topo';a.mapAutoOffline=false;
+ }
+ if(isGridOnlyMap(slug)&&a.layer!=='grid'){
+  a.preferredOnlineLayer=a.layer;a.layer='grid';a.mapAutoOffline=true;
+ }
  // Never carry positions or elevations from one world into another.
  ++onlineRequest;++terrainToken;finishTileProbe();
  terrainGrid=null;terrainStatus='idle';terrainError='';onlineInfo=null;offlineReason='';
@@ -78,7 +180,11 @@ window.mapAimChangeMap=slug=>{
  if(typeof opCapture==='function')opState.inputs=opCapture();
  opPersist();updateMapMenu();terrainUi();render();solve();
  if(slug==='everon')void terrainFetch();
- if(a.layer==='grid'){onlineState='offline';onlineLabel();}
+ $('mapAimLayer').value=a.layer;
+ if(isGridOnlyMap(slug)){
+  offlineReason='Для '+mapMeta(slug).name+' онлайн-подложка недоступна';
+  onlineState='offline';onlineLabel();render();
+ }else if(a.layer==='grid'){onlineState='offline';onlineLabel();}
  else void loadOnlineMap(true);
  status('Выбрана '+mapMeta(slug).name+'. Старые метки и высоты очищены.','mapAimInstruction');
 };
@@ -95,6 +201,7 @@ function onlineLabel(){
 function finishTileProbe(){if(tileWatchdog!==null)clearTimeout(tileWatchdog);tileWatchdog=null;tileProbe=null;}
 function failOnline(reason){
  finishTileProbe();onlineState='error';offlineReason=reason;
+ const state=st();state.mapAutoOffline=true;state.preferredOnlineLayer=state.layer;
  if(st().image){onlineLabel();render();return;}
  st().layer='grid';const select=$('mapAimLayer');if(select)select.value='grid';
  try{opPersist();}catch(error){console.warn('Сохранение слоя не удалось:',error);}
@@ -136,13 +243,25 @@ function onlineTiles(svg,a,v){
 async function loadOnlineMap(force=false){
  const a=st();
  if(a.image){offlineReason='';onlineLabel();render();return;}
- if(a.layer==='grid'&&!force){offlineReason='';onlineState='offline';onlineLabel();render();return;}
+ if(isGridOnlyMap(a.mapSlug)){
+  offlineReason='Для '+selectedMap().name+' у Enfumap нет доступной онлайн-подложки';
+  a.mapAutoOffline=true;a.layer='grid';$('mapAimLayer').value='grid';
+  onlineState='offline';onlineLabel();render();return;
+ }
+ if(a.layer==='grid'&&!force){onlineState='offline';onlineLabel();render();return;}
  const token=++onlineRequest;tileProbeToken=-1;finishTileProbe();onlineInfo=null;
  onlineState='loading';offlineReason='';onlineLabel();render();
  try{
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
   let response;try{response=await fetch(mapEndpoint+'/api/v1/maps/'+encodeURIComponent(a.mapSlug),{cache:'no-cache',signal:controller.signal});}finally{clearTimeout(timer);}
-  if(!response.ok)throw Error('HTTP '+response.status);
+  if(!response.ok){
+   if(response.status===404){
+    const meta=mapCatalogue.get(a.mapSlug);
+    if(meta){mapCatalogue.set(a.mapSlug,{...meta,online:false,checked:true});updateMapMenu();}
+    throw Error('HTTP 404: для '+selectedMap().name+' нет онлайн-подложки');
+   }
+   throw Error('HTTP '+response.status);
+  }
   const json=await response.json();
   if(json?.ok!==true||!json.data?.tiles)throw Error('Неверные данные карты');
   const newWorldSize=validateMapDimensions(json.data.worldSize);
@@ -155,6 +274,8 @@ async function loadOnlineMap(force=false){
    a.layer='topo';$('mapAimLayer').value='topo';
   }
   if(token!==onlineRequest||a.mapSlug!==st().mapSlug)return;
+  mapCatalogue.set(a.mapSlug,{...mapCatalogue.get(a.mapSlug),online:true,checked:true});
+  updateMapMenu();
   onlineInfo=json.data;onlineState='tiles';onlineLabel();render();
  }catch(e){if(token!==onlineRequest)return;console.warn('Enfumap недоступен:',e.message);failOnline('Нет доступа к онлайн-карте ('+e.message+').');}
 }
@@ -322,6 +443,12 @@ window.mapAimToggleAutoHeight=(kind,checked)=>{
 
 function st(){if(!opState.mapAim||typeof opState.mapAim!=='object')opState.mapAim=fresh();const a=opState.mapAim;
  if(!a.mapSlug||!/^[a-z0-9_-]+$/.test(a.mapSlug))a.mapSlug='everon';
+ if(a.manualMap?.slug===a.mapSlug&&!mapCatalogue.has(a.mapSlug)){
+  const size=Number(a.manualMap.worldSize);
+  if(Number.isFinite(size)&&size>=1000&&size<=100000){
+   mapCatalogue.set(a.mapSlug,{...a.manualMap,online:false,checked:true,manual:true});
+  }
+ }
  if(!mapCatalogue.has(a.mapSlug)&&!Number.isFinite(Number(a.worldSize)))a.mapSlug='everon';
  S=validateMapDimensions(a.worldSize||mapMeta(a.mapSlug).worldSize);
  a.worldSize=S;
@@ -679,9 +806,26 @@ window.mapAimChangeTrajectory=value=>{
 };
 window.mapAimSetHeight=(which,z)=>{if(!['gun','target'].includes(which))return;terrainFlags()[which]=false;const field=$(which==='gun'?'artZ':'tgtZ');field.value=z;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));terrainUi();opPersist();solve();};
 window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();syncAutoTerrain();render();stats();onlineLabel();};
-window.mapAimGoOffline=()=>{++onlineRequest;finishTileProbe();offlineReason='';onlineState='offline';st().layer='grid';$('mapAimLayer').value='grid';opPersist();render();onlineLabel();status('GRID-сетка включена. Можно работать без интернета.','mapAimInstruction');};
-window.mapAimRetryOnline=()=>{if(st().image){status('Сначала удалите загруженное изображение карты.','mapAimInstruction');return;}if(st().layer==='grid'){st().layer='topo';$('mapAimLayer').value='topo';opPersist();}loadOnlineMap(true);};
-window.mapAimSelectLayer=layer=>{if(!['topo','satellite','fogless','grid'].includes(layer))return;if(layer==='grid')return window.mapAimGoOffline();st().layer=layer;opPersist();onlineState='tiles';tileProbeToken=-1;finishTileProbe();if(onlineInfo){render();onlineLabel();}else loadOnlineMap(true);};
+window.mapAimGoOffline=()=>{++onlineRequest;finishTileProbe();offlineReason='';onlineState='offline';const a=st();a.layer='grid';a.mapAutoOffline=false;$('mapAimLayer').value='grid';opPersist();render();onlineLabel();status('GRID-сетка включена. Можно работать без интернета.','mapAimInstruction');};
+window.mapAimRetryOnline=()=>{
+ if(st().image){status('Сначала удалите загруженное изображение карты.');return;}
+ if(isGridOnlyMap(st().mapSlug)){
+  status('Для '+selectedMap().name+' нет доступной онлайн-подложки. Воспользуйтесь GRID или своим изображением.');return;
+ }
+ if(st().layer==='grid'){st().layer='topo';$('mapAimLayer').value='topo';}
+ st().mapAutoOffline=false;opPersist();void loadOnlineMap(true);
+};
+window.mapAimSelectLayer=layer=>{
+ if(!['topo','satellite','fogless','grid'].includes(layer))return;
+ if(layer==='grid')return window.mapAimGoOffline();
+ if(isGridOnlyMap(st().mapSlug)){
+  $('mapAimLayer').value='grid';
+  status('Онлайн-слой для '+selectedMap().name+' отсутствует. Можно загрузить свою картинку.');return;
+ }
+ st().layer=layer;st().mapAutoOffline=false;st().preferredOnlineLayer=layer;opPersist();
+ onlineState='tiles';tileProbeToken=-1;finishTileProbe();
+ if(onlineInfo){render();onlineLabel();}else void loadOnlineMap(true);
+};
 window.mapAimSaveTarget=()=>{if(!xy('target')){status('Сначала отметьте цель.');return;}solve();if(typeof window.tacSaveCurrentTarget==='function'){window.tacSaveCurrentTarget();status('Цель передана в библиотеку.','mapAimStatus');}};
 window.mapAimSaveWeapon=()=>{if(!xy('gun')){status('Сначала отметьте орудие.');return;}solve();if(typeof window.tacSaveCurrentWeapon==='function'){window.tacSaveCurrentWeapon();status('Орудие передано в батарею.','mapAimStatus');}};
 window.mapAimClearImage=()=>{st().image='';st().refs=fresh().refs;$('mapAimImage').value='';opPersist();syncAutoTerrain();render();onlineLabel();status('Изображение удалено. GRID продолжает работать.');};
@@ -700,7 +844,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();window.mapAimZoom(e.deltaY<0?2:.5);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){

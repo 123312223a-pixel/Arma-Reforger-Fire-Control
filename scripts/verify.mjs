@@ -77,6 +77,15 @@ assert.ok(mapScript.includes('drawMinimumRange')&&mapScript.includes('insideMini
 assert.ok(mapScript.includes("st().mapSlug!=='everon'"),
  'Never allow Everon height data to affect a different world');
 console.log('OK: multi-world map controls and red minimum range zone');
+for(const id of ['mapServerPreset','mapCustomWorldSize','mapCustomWorldName','mapCustomWorldStatus']){
+ assert.ok(html.includes('id="'+id+'"'),'Server map UI missing '+id);
+}
+const enhancedMap=fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8');
+for(const id of ['isGridOnlyMap','mapAimSelectServerPreset','mapAimAddCustomWorld','catalogVerified']){
+ assert.ok(enhancedMap.includes(id),'Missing map catalogue safeguard '+id);
+}
+assert.ok(enhancedMap.includes('response.status===404'),'Missing per-map 404 handling');
+console.log('OK: server map presets, GRID categorization, HTTP 404 fallback and user world sizes');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
 

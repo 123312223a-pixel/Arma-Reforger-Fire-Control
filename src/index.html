@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.8.0 — Desktop</title>
+<title>Arma Reforger Fire Control 3.8.1 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -594,7 +594,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 <body>
 <div class="container">
     <header class="header ux-header">
-        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.8.0</span></div>
+        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.8.1</span></div>
         <h1>Панель управления расчётами</h1>
         <p>Координаты, расчёт, цели и батарея — в одном интерфейсе. Расчёты используют проверенные игровые таблицы.</p>
     </header>
@@ -652,6 +652,17 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                   <span id="mapCatalogStatus" class="op-pill" role="status">Загрузка каталога…</span>
                 </div>
                 <p class="map-aim-muted" id="mapWorldInfo">Эверон · 12 800 × 12 800 м.</p>
+                <details class="map-aim-details map-aim-custom-world" style="margin:0 0 12px">
+                  <summary>⚙ Карты серверов AHS / ULTRV и свой игровой мир</summary>
+                  <p class="map-aim-muted">ULTRV Bakhmut City и Kunar Province доступны через онлайн-каталог Enfumap. Для Strelechye, Sergeevka и Chasov Yar можно использовать GRID и собственный снимок карты. Размер мира должен совпадать с размером из игры.</p>
+                  <div class="map-aim-form-grid">
+                    <div class="form-group"><label for="mapServerPreset">Серверная карта</label><select id="mapServerPreset" onchange="mapAimSelectServerPreset(this.value)"><option value="">Выбрать карту сервера…</option></select></div>
+                    <div class="form-group"><label for="mapCustomWorldSize">Размер мира, м (обязательно для своих карт)</label><input id="mapCustomWorldSize" type="number" min="1000" max="100000" step="1" placeholder="Например, 10240"></div>
+                  </div>
+                  <div class="form-group"><label for="mapCustomWorldName">Название своей карты</label><input id="mapCustomWorldName" maxlength="64" placeholder="Карта сервера / мир Workshop"></div>
+                  <button type="button" class="op-btn" onclick="mapAimAddCustomWorld()">＋ Добавить карту с GRID</button>
+                  <p id="mapCustomWorldStatus" class="map-aim-muted" role="status">Не указывайте размер наугад: от него зависит масштаб кругов дальности. Для AHS_Strelechye материалы Workshop нельзя копировать или распространять без разрешения правообладателя.</p>
+                </details>
                 <div class="map-aim-actions" aria-label="Слои игровой карты">
                   <label for="mapAimLayer">Изображение карты:</label>
                   <select id="mapAimLayer" class="op-select" onchange="mapAimSelectLayer(this.value)">
@@ -664,6 +675,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                   <button class="op-btn" type="button" onclick="mapAimRetryOnline()" title="Попробовать повторно подключить подложку">↻ Повторить загрузку</button>
                   <button class="op-btn" type="button" onclick="mapAimGoOffline()" title="Показать игровую сетку без интернета">▦ Офлайн-сетка</button>
                 </div>
+                <p class="map-aim-muted">Статус «только GRID» означает отсутствие подтверждённой онлайн-подложки Enfumap, а не сбой калькулятора. Можно импортировать своё изображение ниже. Карту высот Эверона нельзя применять к другим мирам.</p>
                 <p class="map-aim-muted">Карта по игровым метрам: <a href="https://enfumap.com/developers" target="_blank" rel="noopener noreferrer">© Enfumap</a> (топографическая, спутниковая и без тумана). Тайлы загружаются напрямую с сервера, не входят в установщик. В режиме офлайн карта отображается сеткой.</p>
                 <div class="map-aim-actions" aria-label="Инструменты нанесения точек">
                   <button type="button" class="op-btn is-selected" id="mapModeGun" onclick="mapAimSetTool('gun')" aria-pressed="true">◆ Поставить орудие</button>
