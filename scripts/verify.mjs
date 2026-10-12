@@ -5,7 +5,7 @@ const html=fs.readFileSync(new URL('../src/index.html',import.meta.url),'utf8');
 const expected=fs.readFileSync(new URL('./core.sha256',import.meta.url),'utf8').trim().split(/\s+/)[0];
 const a=html.indexOf('const ballisticData = {'),b=html.indexOf('// ===== Operational extensions:');
 assert.ok(a>0&&b>a,'Ballistic data and calculation core missing');
-const actual=crypto.createHash('sha256').update(html.slice(a,b)).digest('hex');
+const actual=crypto.createHash('sha256').update(html.slice(a,b).replace(/\r\n/g,'\n')).digest('hex');
 assert.equal(actual,expected,'Ballistic calculation core differs from tested 3.5 version');
 for(const word of ['desktopBootAndSetup','load_state','store_state','tacRecalculateBattery','milsPerCircle']){
  assert.ok(html.includes(word),'Missing '+word);
