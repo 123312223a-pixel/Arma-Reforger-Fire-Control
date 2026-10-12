@@ -88,14 +88,6 @@ async function discoverMaps(){
     mapCatalogue.delete(legacy);
    }
   }
-  // The official island is called "Kolguyev" in Enfumap, not "Kolguev".
-  if(mapCatalogue.get('kolguyev')?.online===true){
-   if(st().mapSlug==='kolguev'){
-    const a=st();a.mapSlug='kolguyev';a.worldSize=mapMeta('kolguyev').worldSize;
-    opPersist();
-   }
-   mapCatalogue.delete('kolguev');
-  }
   updateMapMenu();
   if(isGridOnlyMap(st().mapSlug)&&st().layer!=='grid'&&!st().image){
    const a=st();a.preferredOnlineLayer=a.layer;a.mapAutoOffline=true;a.layer='grid';
@@ -250,6 +242,7 @@ function onlineTiles(svg,a,v){
  if(firstUrl && onlineState==='tiles' && tileProbeToken!==onlineRequest){
   const token=onlineRequest;tileProbeToken=token;finishTileProbe();
   const probe=new Image();tileProbe=probe;
+  probe.decoding='async';
   probe.onload=()=>{if(token!==onlineRequest)return;finishTileProbe();onlineState='ready';offlineReason='';onlineLabel();};
   probe.onerror=()=>{if(token===onlineRequest)failOnline('Сервер ответил, но изображения карты не загружаются.');};
   tileWatchdog=setTimeout(()=>{if(token===onlineRequest && onlineState!=='ready')failOnline('Тайлы не загрузились за 9 секунд.');},9000);
@@ -281,6 +274,7 @@ async function loadOnlineMap(force=false){
   const json=await response.json();
   if(json?.ok!==true||!json.data?.tiles)throw Error('Неверные данные карты');
   const newWorldSize=validateMapDimensions(json.data.worldSize);
+  if(token!==onlineRequest||a.mapSlug!==st().mapSlug)return;
   if(newWorldSize!==S){
    S=newWorldSize;a.worldSize=S;a.refs=fresh().refs;
    mapCatalogue.set(a.mapSlug,{...mapMeta(a.mapSlug),worldSize:S});
