@@ -43,6 +43,11 @@ jobs:
         run: npm install
       - name: Verify core and configured channel
         run: npm run release:verify
+      - name: Verify Windows frontend includes interactive map
+        shell: pwsh
+        run: |
+          npm run build:web
+          node scripts/verify-bundle.mjs
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

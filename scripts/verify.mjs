@@ -27,5 +27,10 @@ const pkg=JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url)
 assert.equal(pkg.version,config.version);
 const cargo=fs.readFileSync(new URL('../src-tauri/Cargo.toml', import.meta.url),'utf8');
 assert.ok(cargo.includes(`version = "${pkg.version}"`));
+const mapJs=fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8');
+assert.match(html,/<script\s+type="module"\s+src="\.\/map-mode\.js"><\/script>/,
+  'Map code must be a Vite module or it will not be packaged into the Windows app');
+assert.ok(mapJs.includes('window.mapAimInit='),'Missing map initialization');
+console.log('OK: map is linked as a Vite module');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');

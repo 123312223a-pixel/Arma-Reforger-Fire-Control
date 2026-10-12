@@ -1,4 +1,4 @@
-/* v3.7.1 map aiming. No ballistics here; use existing calculateCoords(). */
+/* v3.7.2 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
 const S=12800,B=800,N='http://www.w3.org/2000/svg', $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const fresh=()=>({tool:'gun',layer:'topo',zoom:1,cx:400,cy:400,image:'',refs:[{px:0,py:0,x:0,y:S},{px:800,py:800,x:S,y:0}]});
