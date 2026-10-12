@@ -76,6 +76,18 @@ async function discoverMaps(){
   for(const item of maps){
    mapCatalogue.set(item.slug,{...mapCatalogue.get(item.slug),...item,online:true,checked:true});
   }
+  // Keep saved selections from older builds aligned with Enfumap's real slugs.
+  const aliases={kolguev:'kolguyev',kunar:'kunar-province',serhiivka:'wcs-serhiivka'};
+  for(const [legacy,canonical] of Object.entries(aliases)){
+   if(mapCatalogue.get(canonical)?.online===true){
+    const a=st();
+    if(a.mapSlug===legacy){
+     a.mapSlug=canonical;a.worldSize=mapMeta(canonical).worldSize;
+     S=a.worldSize;opPersist();
+    }
+    mapCatalogue.delete(legacy);
+   }
+  }
   // The official island is called "Kolguyev" in Enfumap, not "Kolguev".
   if(mapCatalogue.get('kolguyev')?.online===true){
    if(st().mapSlug==='kolguev'){
@@ -99,10 +111,10 @@ function installServerPresets(){
  const select=$('mapServerPreset');if(!select)return;
  const names=[
   ['','Выбрать карту сервера…'],
-  ['ultrv-bakhmut-city','ULTRV · Бахмут (Bakhmut City, онлайн)'],
-  ['ultrv-kunar-province','ULTRV · Kunar Province (онлайн)'],
+  ['ultrv-bakhmut-city','ULTRV · Bakhmut City (карта доступна онлайн; сервер не подтверждён)'],
+  ['ultrv-kunar-province','ULTRV · Kunar Province (карта доступна онлайн; сервер уточнить)'],
+  ['ahs-sergeevka','AHS · WCS_Serhiivka (онлайн-подложка местности)'],
   ['ahs-strelechye','AHS · Strelechye (свой размер / GRID)'],
-  ['ahs-sergeevka','AHS · Sergeevka (свой размер / GRID)'],
   ['ultrv-chasov-yar','ULTRV · Chasov Yar (свой размер / GRID)']
  ];
  select.replaceChildren(...names.map(([v,label])=>{
@@ -111,18 +123,22 @@ function installServerPresets(){
 }
 window.mapAimSelectServerPreset=key=>{
  const input=$('mapCustomWorldSize'),name=$('mapCustomWorldName');
- if(key==='ultrv-bakhmut-city'||key==='ultrv-kunar-province'){
-  const slug=key==='ultrv-bakhmut-city'?'bakhmut-city':'kunar-province';
-  const title=key==='ultrv-bakhmut-city'?'Bakhmut City · ULTRV':'Kunar Province · ULTRV';
-  const worldSize=key==='ultrv-bakhmut-city'?10240:4096;
-  if(!mapCatalogue.has(slug))mapCatalogue.set(slug,{slug,name:title,worldSize,online:null});
-  updateMapMenu();window.mapAimChangeMap(slug);
-  status('Сценарий ULTRV: '+title+'. Онлайн-слой загружается с Enfumap.','mapAimInstruction');
+ const onlinePresets={
+  'ultrv-bakhmut-city':{slug:'bakhmut-city',title:'Bakhmut City',size:10240},
+  'ultrv-kunar-province':{slug:'kunar-province',title:'Kunar Province',size:4096},
+  'ahs-sergeevka':{slug:'wcs-serhiivka',title:'WCS_Serhiivka',size:10240}
+ };
+ const preset=onlinePresets[key];
+ if(preset){
+  if(!mapCatalogue.has(preset.slug))mapCatalogue.set(preset.slug,{
+   slug:preset.slug,name:preset.title,worldSize:preset.size,online:null
+  });
+  updateMapMenu();window.mapAimChangeMap(preset.slug);
+  status('Подложка '+preset.title+' загружается с Enfumap при доступности сервиса. Название пресета не подтверждает текущую ротацию серверов.','mapAimInstruction');
   return;
  }
  const descriptions={
   'ahs-strelechye':'AHS · Strelechye',
-  'ahs-sergeevka':'AHS · Sergeevka',
   'ultrv-chasov-yar':'ULTRV · Chasov Yar'
  };
  if(descriptions[key]){
