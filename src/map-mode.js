@@ -1,19 +1,93 @@
 import { formatMapTileUrl } from './map-url.mjs';
+import {FALLBACK_REFORGER_MAPS,normalizeMapListing,validateMapDimensions} from './map-catalog.mjs';
 import { EVERON_HEIGHT_URL, packHeightGrid, getTerrainHeight, sampleElevationProfile } from './heightmap.mjs';
 import { fetch as nativeHttpFetch } from '@tauri-apps/plugin-http';
 /* v3.7.2 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
-const S=12800,B=800,N='http://www.w3.org/2000/svg', $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const fresh=()=>({tool:'gun',layer:'topo',zoom:1,cx:400,cy:400,image:'',refs:[{px:0,py:0,x:0,y:S},{px:800,py:800,x:S,y:0}]});
+let S=12800;const B=800,N='http://www.w3.org/2000/svg', $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fresh=()=>({mapSlug:'everon',worldSize:S,tool:'gun',layer:'topo',zoom:1,cx:400,cy:400,image:'',refs:[{px:0,py:0,x:0,y:S},{px:800,py:800,x:S,y:0}]});
 let ready=false,drag=null,onlineInfo=null,onlineState='loading',onlineRequest=0;
 let tileProbeToken=-1, tileProbe=null, tileWatchdog=null, offlineReason='';
 const mapEndpoint='https://enfumap.com';
+
+const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,item]));
+const mapMeta=slug=>mapCatalogue.get(slug)||FALLBACK_REFORGER_MAPS[0];
+const selectedMap=()=>mapMeta(st().mapSlug);
+function updateMapMenu(){
+ const field=$('mapWorldSelect');if(!field)return;
+ const active=st().mapSlug;
+ const options=Array.from(mapCatalogue.values()).sort((a,b)=>{
+  if(a.slug==='everon')return -1;if(b.slug==='everon')return 1;
+  if(a.slug==='arland')return -1;if(b.slug==='arland')return 1;
+  return a.name.localeCompare(b.name,'ru');
+ });
+ field.replaceChildren(...options.map(item=>{
+  const option=document.createElement('option');
+  option.value=item.slug;
+  option.textContent=item.name+' · '+Math.round(item.worldSize).toLocaleString('ru-RU')+' м';
+  return option;
+ }));
+ field.value=active;
+ const label=$('mapWorldInfo'),meta=mapMeta(active);
+ if(label)label.textContent=meta.name+' · '+Math.round(S).toLocaleString('ru-RU')+
+  ' × '+Math.round(S).toLocaleString('ru-RU')+' м'+
+  (meta.author?' · '+meta.author:'')+'.';
+ const count=$('mapCatalogStatus');
+ if(count)count.textContent=options.length+' карт в списке · онлайн-каталог обновляется автоматически';
+}
+async function discoverMaps(){
+ try{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  let response;
+  try{response=await fetch(mapEndpoint+'/api/v1/maps',{cache:'no-cache',signal:controller.signal});}
+  finally{clearTimeout(timer);}
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const maps=normalizeMapListing(await response.json());
+  if(maps.length<2)throw Error('Список карт пуст');
+  for(const item of maps)mapCatalogue.set(item.slug,{...mapMeta(item.slug),...item});
+  updateMapMenu();
+ }catch(error){
+  if($('mapCatalogStatus'))$('mapCatalogStatus').textContent=
+   FALLBACK_REFORGER_MAPS.length+' предустановленные карты · онлайн-каталог недоступен';
+ }
+}
+function clearWorldCoordinates(){
+ for(const id of ['artX','artY','tgtX','tgtY','artZ','tgtZ']){
+  const input=$(id);
+  if(input){input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));}
+ }
+ for(const id of ['mapResultElev','mapResultCharge','mapResultTof'])if($(id))$(id).textContent='—';
+ if(typeof markResultsStale==='function')markResultsStale('coords');
+}
+window.mapAimChangeMap=slug=>{
+ if(!mapCatalogue.has(slug))return;
+ const a=st();if(a.mapSlug===slug)return;
+ // Never carry positions or elevations from one world into another.
+ ++onlineRequest;++terrainToken;finishTileProbe();
+ terrainGrid=null;terrainStatus='idle';terrainError='';onlineInfo=null;offlineReason='';
+ a.mapSlug=slug;a.image='';a.zoom=1;a.cx=400;a.cy=400;a.tool='gun';
+ S=validateMapDimensions(mapMeta(slug).worldSize);
+ a.worldSize=S;a.refs=fresh().refs;
+ $('mapAimImage').value='';
+ for(const [i,r] of a.refs.entries()){
+  $('mapRef'+(i+1)+'X').value=r.x;
+  $('mapRef'+(i+1)+'Y').value=r.y;
+ }
+ clearWorldCoordinates();
+ if(typeof opCapture==='function')opState.inputs=opCapture();
+ opPersist();updateMapMenu();terrainUi();render();solve();
+ if(slug==='everon')void terrainFetch();
+ if(a.layer==='grid'){onlineState='offline';onlineLabel();}
+ else void loadOnlineMap(true);
+ status('Выбрана '+mapMeta(slug).name+'. Старые метки и высоты очищены.','mapAimInstruction');
+};
+
 function onlineLabel(){
  const label=$('mapAimTileState');if(!label)return;
  const state=st();
  if(state.image)label.textContent='Своя карта · сохранена локально';
  else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
- else if(onlineState==='ready')label.textContent='Карта подключена · Enfumap';
+ else if(onlineState==='ready')label.textContent=selectedMap().name+' · карта подключена · Enfumap';
  else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
  else label.textContent='Онлайн-карта недоступна · включите GRID';
 }
@@ -66,11 +140,20 @@ async function loadOnlineMap(force=false){
  onlineState='loading';offlineReason='';onlineLabel();render();
  try{
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
-  let response;try{response=await fetch(mapEndpoint+'/api/v1/maps/everon',{cache:'no-cache',signal:controller.signal});}finally{clearTimeout(timer);}
+  let response;try{response=await fetch(mapEndpoint+'/api/v1/maps/'+encodeURIComponent(a.mapSlug),{cache:'no-cache',signal:controller.signal});}finally{clearTimeout(timer);}
   if(!response.ok)throw Error('HTTP '+response.status);
   const json=await response.json();
-  if(json?.ok!==true||!json.data?.tiles||Number(json.data.worldSize)!==S)throw Error('Неверные данные карты');
-  if(token!==onlineRequest)return;
+  if(json?.ok!==true||!json.data?.tiles)throw Error('Неверные данные карты');
+  const newWorldSize=validateMapDimensions(json.data.worldSize);
+  if(newWorldSize!==S){
+   S=newWorldSize;a.worldSize=S;a.refs=fresh().refs;
+   mapCatalogue.set(a.mapSlug,{...mapMeta(a.mapSlug),worldSize:S});
+   updateMapMenu();opPersist();
+  }
+  if(a.layer!=='topo'&&a.layer!=='grid'&&!json.data.tiles.layers?.[a.layer]){
+   a.layer='topo';$('mapAimLayer').value='topo';
+  }
+  if(token!==onlineRequest||a.mapSlug!==st().mapSlug)return;
   onlineInfo=json.data;onlineState='tiles';onlineLabel();render();
  }catch(e){if(token!==onlineRequest)return;console.warn('Enfumap недоступен:',e.message);failOnline('Нет доступа к онлайн-карте ('+e.message+').');}
 }
@@ -90,6 +173,7 @@ function terrainFlags() {
 function terrainMessage() {
   const label=$('mapHeightState');if(!label)return;
   if (st().image) label.textContent='Своя карта: автоматическая высота отключена (доступна ручная Z).';
+  else if (st().mapSlug!=='everon')label.textContent='Для '+selectedMap().name+' высоты пока не подключены. Вводите Z вручную; рельеф Эверона не применяется.';
   else if (terrainStatus==='ready'&&terrainGrid) label.textContent='Рельеф Эверона подключён · шаг ≈'+
     Math.round(S/terrainGrid.cols)+' м · сохранён локально · Z поверхности';
   else if (terrainStatus==='loading') label.textContent='Загружаем высоты Эверона… ручные Z пока сохранены.';
@@ -101,13 +185,13 @@ function terrainUi() {
   for (const kind of ['gun','target']) {
     const id=kind==='gun'?'mapGunZ':'mapTargetZ';
     const check=$(kind==='gun'?'mapAutoGunZ':'mapAutoTargetZ');
-    if(check)check.checked=terrainFlags()[kind];
-    const input=$(id);if(input)input.readOnly=!!(terrainFlags()[kind]&&terrainGrid&&!st().image);
+    if(check){check.checked=terrainFlags()[kind];check.disabled=st().mapSlug!=='everon';}
+    const input=$(id);if(input)input.readOnly=!!(st().mapSlug==='everon'&&terrainFlags()[kind]&&terrainGrid&&!st().image);
   }
   terrainMessage();
 }
 function autoHeight(kind) {
-  if (!terrainGrid||st().image||!terrainFlags()[kind])return false;
+  if (st().mapSlug!=='everon'||!terrainGrid||st().image||!terrainFlags()[kind])return false;
   const p=xy(kind);if(!p)return false;
   const z=getTerrainHeight(terrainGrid,p.x,p.y,S);
   if(z===null||!Number.isFinite(z))return false;
@@ -167,6 +251,7 @@ function setTerrain(grid,reason){
   status('Высоты Эверона доступны ('+reason+'). Автоматическое Z можно выключить отдельно для каждой точки.','mapAimInstruction');
 }
 async function terrainFetch(force=false){
+  if(st().mapSlug!=='everon'){terrainGrid=null;terrainStatus='idle';terrainUi();return;}
   const token=++terrainToken;
   if(terrainGrid&&!force){terrainUi();return;}
   terrainStatus='loading';terrainError='';terrainUi();
@@ -216,6 +301,7 @@ async function terrainFetch(force=false){
 window.mapAimLoadTerrain=()=>void terrainFetch(true);
 window.mapAimImportTerrain=async input=>{
   const file=input.files?.[0];if(!file)return;
+  if(st().mapSlug!=='everon'){status('Импорт высот Эверона доступен только на карте Эверон.');input.value='';return;}
   try{
     if(file.size>90000000)throw Error('Файл высот больше 90 МБ');
     const parsed=JSON.parse(await file.text());
@@ -234,6 +320,10 @@ window.mapAimToggleAutoHeight=(kind,checked)=>{
 };
 
 function st(){if(!opState.mapAim||typeof opState.mapAim!=='object')opState.mapAim=fresh();const a=opState.mapAim;
+ if(!a.mapSlug||!/^[a-z0-9_-]+$/.test(a.mapSlug))a.mapSlug='everon';
+ if(!mapCatalogue.has(a.mapSlug)&&!Number.isFinite(Number(a.worldSize)))a.mapSlug='everon';
+ S=validateMapDimensions(a.worldSize||mapMeta(a.mapSlug).worldSize);
+ a.worldSize=S;
  if(!Array.isArray(a.refs)||a.refs.length!==2)a.refs=fresh().refs;
  if(typeof a.image!=='string'||a.image.length>1800000||a.image&&!a.image.startsWith('data:image/jpeg;base64,'))a.image='';
  if(!['topo','satellite','fogless','grid'].includes(a.layer))a.layer='topo';
@@ -247,7 +337,7 @@ function refs(){const [a,b]=st().refs,dp=b.px-a.px,dq=b.py-a.py,dx=b.x-a.x,dy=b.
 function toWorld(p){const r=refs();return r?{x:r.a.x+(p.x-r.a.px)*r.sx,y:r.a.y+(p.y-r.a.py)*r.sy}:null;}
 function toPixel(p){const r=refs();return r?{x:r.a.px+(p.x-r.a.x)/r.sx,y:r.a.py+(p.y-r.a.y)/r.sy}:null;}
 function el(tag,atts={},text){const n=document.createElementNS(N,tag);Object.entries(atts).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!==undefined)n.textContent=text;return n;}
-function xy(kind){const ids=kind==='gun'?['artX','artY']:['tgtX','tgtY'];const x=Number($(ids[0]).value),y=Number($(ids[1]).value);return isxy({x,y})?{x,y}:null;}
+function xy(kind){const ids=kind==='gun'?['artX','artY']:['tgtX','tgtY'];if(!$(ids[0])?.value.trim()||!$(ids[1])?.value.trim())return null;const x=Number($(ids[0]).value),y=Number($(ids[1]).value);return isxy({x,y})?{x,y}:null;}
 const fmt=q=>q?`${Math.round(q.x).toString().padStart(5,'0')} / ${Math.round(q.y).toString().padStart(5,'0')}`:'—';
 function status(message,id='mapAimInstruction'){const x=$(id);if(x)x.textContent=message;}
 function viewport(){const a=st(),size=B/a.zoom;a.cx=clamp(a.cx,size/2,B-size/2);a.cy=clamp(a.cy,size/2,B-size/2);return {x:a.cx-size/2,y:a.cy-size/2,size};}
@@ -310,6 +400,10 @@ function drawTerrainProfile(){
   const gun=xy('gun'),target=xy('target');
   if(!gun||!target||Math.hypot(target.x-gun.x,target.y-gun.y)<1){
     terrainProfileMessage('Укажите орудие и цель.');return;
+  }
+  if(st().mapSlug!=='everon'){
+    terrainProfileMessage('Профиль рельефа для '+selectedMap().name+' пока недоступен.',
+      'В этом режиме высоты Z вводятся вручную.');return;
   }
   if(st().image){
     terrainProfileMessage('Собственная подложка: профиль Эверона отключён.',
@@ -530,7 +624,7 @@ function solve(){const a=xy('gun'),b=xy('target');stats();if(!a||!b||Math.hypot(
 }
 function pointAt(e){const svg=$('mapAimSvg'),ctm=svg.getScreenCTM();if(!ctm)return null;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const r=point.matrixTransform(ctm.inverse());return {x:r.x,y:r.y};}
 function calibrate(tool,p){if(!st().image){status('Для онлайн-слоя калибровка не требуется. Загрузите свою карту.','mapCalibrationStatus');return;}const i=tool==='ref1'?0:1,x=Number($(`mapRef${i+1}X`).value),y=Number($(`mapRef${i+1}Y`).value),a=st();
- if(!isxy({x,y})){status('Укажите координаты GRID от 0 до 12800.','mapCalibrationStatus');return;}
+ if(!isxy({x,y})){status('Укажите координаты GRID от 0 до '+S+'.','mapCalibrationStatus');return;}
  const prev=a.refs[i];a.refs[i]={px:p.x,py:p.y,x,y};
  if(!refs()){a.refs[i]=prev;status('Точки не подошли. Нужны разные X/Y, север должен быть вверху.','mapCalibrationStatus');return;}
  opPersist();render();stats();status(`Точка ${i+1} привязана. Сетка обновлена.`,'mapCalibrationStatus');window.mapAimSetTool(i===0?'ref2':'gun');
@@ -572,7 +666,7 @@ window.mapAimSelectLayer=layer=>{if(!['topo','satellite','fogless','grid'].inclu
 window.mapAimSaveTarget=()=>{if(!xy('target')){status('Сначала отметьте цель.');return;}solve();if(typeof window.tacSaveCurrentTarget==='function'){window.tacSaveCurrentTarget();status('Цель передана в библиотеку.','mapAimStatus');}};
 window.mapAimSaveWeapon=()=>{if(!xy('gun')){status('Сначала отметьте орудие.');return;}solve();if(typeof window.tacSaveCurrentWeapon==='function'){window.tacSaveCurrentWeapon();status('Орудие передано в батарею.','mapAimStatus');}};
 window.mapAimClearImage=()=>{st().image='';st().refs=fresh().refs;$('mapAimImage').value='';opPersist();syncAutoTerrain();render();onlineLabel();status('Изображение удалено. GRID продолжает работать.');};
-window.mapAimClearCalibration=()=>{st().refs=fresh().refs;for(const [i,r] of st().refs.entries()){$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;}opPersist();render();stats();status('Стандартная привязка 0…12800 м восстановлена.','mapCalibrationStatus');};
+window.mapAimClearCalibration=()=>{st().refs=fresh().refs;for(const [i,r] of st().refs.entries()){$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;}opPersist();render();stats();status('Стандартная привязка 0…'+S+' м восстановлена.','mapCalibrationStatus');};
 window.mapAimLoadImage=async input=>{const file=input.files?.[0];if(!file)return;
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>20000000){status('Нужен JPG, PNG или WebP до 20 МБ.');input.value='';return;}
  const url=URL.createObjectURL(file);try{const pic=new Image();await new Promise((resolve,reject)=>{pic.onload=resolve;pic.onerror=()=>reject(Error('Невозможно открыть изображение'));pic.src=url;});
@@ -587,7 +681,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();window.mapAimZoom(e.deltaY<0?2:.5);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){
