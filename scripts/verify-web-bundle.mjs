@@ -11,7 +11,8 @@ assert.ok(js.includes('mapAimInit'),'Interactive map module missing from Vite ou
 assert.ok(js.includes('mapAimRefresh'),'Map API missing from Vite output');
 assert.ok(js.includes('enfumap.com'),'Enfumap integration missing from Vite output');
 assert.ok(js.includes('mapAimChangeTrajectory'),'M777 map trajectory selection missing from Vite output');
-assert.ok(js.includes('drawTerrainProfile'),'Terrain chart missing from Vite output');
+assert.ok(js.includes('mapTerrainProfileStatus') && js.includes('mapTerrainProfileSummary'),
+ 'Terrain profile DOM renderer missing from Vite output');
 assert.ok(js.includes('sampleElevationProfile') || js.includes('sampleSpacing'),
  'Terrain sampling missing from Vite output');
 console.log('OK: interactive map code is present in Vite bundle');
