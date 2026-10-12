@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {FALLBACK_REFORGER_MAPS,normalizeMapListing,validateMapDimensions} from '../src/map-catalog.mjs';
+assert.ok(FALLBACK_REFORGER_MAPS.length>=23);
+assert.equal(new Set(FALLBACK_REFORGER_MAPS.map(x=>x.slug)).size,FALLBACK_REFORGER_MAPS.length);
+assert.equal(FALLBACK_REFORGER_MAPS.find(x=>x.slug==='everon').worldSize,12800);
+assert.equal(FALLBACK_REFORGER_MAPS.find(x=>x.slug==='arland').worldSize,4095);
+assert.equal(FALLBACK_REFORGER_MAPS.find(x=>x.slug==='kolguev').worldSize,12800);
+for(const m of FALLBACK_REFORGER_MAPS)assert.equal(validateMapDimensions(m.worldSize),m.worldSize);
+const items=normalizeMapListing({ok:true,data:[{slug:'everon',title:'Everon',worldSize:12800},{slug:'arland',name:'Arland',worldSize:4096},{slug:'foo',worldSize:7000},{slug:'../',worldSize:7000},{slug:'bad',worldSize:0}]});
+assert.equal(items.length,3);assert.equal(items[1].worldSize,4096);
+assert.equal(normalizeMapListing({ok:true,data:{maps:[{slug:'new',worldSize:4500}]}}).length,1);
+assert.throws(()=>validateMapDimensions(0));
+console.log('OK: multiple Reforger map sizes and online catalogue validation.');
