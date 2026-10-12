@@ -1,0 +1,43 @@
+name: Publish Windows preview
+
+on:
+  workflow_run:
+    workflows: ["Build Windows installer"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  public-preview:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tested Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: Arma-Reforger-Fire-Control-Windows
+          path: installer
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Publish public preview release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          installers=(installer/*.exe)
+          if [ ${#installers[@]} -eq 0 ]; then echo "No installer found"; exit 1; fi
+          tag="v3.6.0-preview.1"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${installers[@]}" --clobber
+          else
+            gh release create "$tag" "${installers[@]}" \
+              --title "Arma Reforger Fire Control 3.6 — предварительная версия" \
+              --notes "Предварительная сборка Windows. Установщик работает автономно, но не содержит подписанного канала автоматических обновлений. Для последующих подписанных релизов потребуется отдельная настройка ключей Tauri. Сохранённые пользовательские данные не передаются на GitHub." \
+              --prerelease --target "${{ github.event.workflow_run.head_sha }}"
+          fi
