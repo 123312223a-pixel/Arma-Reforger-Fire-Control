@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.6.0 — Desktop</title>
+<title>Arma Reforger Fire Control 3.6.2 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -412,18 +412,25 @@ body.compact-on .module-readout strong{font-size:clamp(1.4rem,3.3vw,2.65rem)}
 @media(max-width:1180px){.tac-extra-layout{grid-template-columns:1fr}}
 @media(max-width:700px){.tac-filterbar label,.tac-target-tools label{min-width:100%}}
 
-/* Signed updater controls */
-.fc-update-panel{margin:16px 0;padding:18px;border:1px solid #668060;border-radius:14px;background:#1c2b20;color:#e6f1e1}
+/* ===== FIRE CONTROL | SIGNED UPDATE CENTER ===== */
 .fc-update-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.fc-update-panel{margin:16px 0;padding:18px;border:1px solid rgba(138,175,118,.3);border-radius:14px;background:rgba(14,27,18,.08)}
 .fc-update-meta{font-size:.87rem;opacity:.78;margin-top:7px}
-.fc-update-status{margin:11px 0;white-space:pre-wrap;line-height:1.5}
+.fc-update-status{margin:11px 0;font-size:.93rem;line-height:1.5;white-space:pre-wrap}
 .fc-update-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
-.fc-update-note{margin:11px 0;padding:11px 13px;border-radius:9px;background:#0f1d12;white-space:pre-wrap;max-height:160px;overflow:auto}
-.fc-update-progress{width:100%;height:12px;margin:12px 0 4px}
+.fc-update-note{margin:11px 0;padding:11px 13px;border-radius:9px;background:rgba(0,0,0,.07);white-space:pre-wrap;line-height:1.5;font-size:.9rem;max-height:160px;overflow:auto}
+.fc-update-progress{width:100%;height:12px;margin:12px 0 4px;accent-color:#88b979}
+.fc-update-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .fc-update-hidden{display:none!important}
+.fc-update-check{display:inline-flex;align-items:center;gap:7px;font-size:.9rem;cursor:pointer}
+body[data-theme="olive"] .fc-update-panel{background:#1c2b20;color:#e6f1e1}
+body[data-theme="olive"] .fc-update-note{background:#0f1d12}
 body[data-theme="slate"] .fc-update-panel{background:#203043;color:#e3ebf4}
+body[data-theme="slate"] .fc-update-note{background:#132334}
 body[data-theme="amber"] .fc-update-panel{background:#322817;color:#f7e8ca}
-body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff}
+body[data-theme="amber"] .fc-update-note{background:#221b0f}
+body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-color:#fff}
+@media (max-width:600px){.fc-update-head{align-items:flex-start}.fc-update-actions>*{flex:1 1 auto}}
 
 </style>
 </head>
@@ -457,12 +464,12 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff}
 
         <div class="content">
             <div class="operation-toolbar" aria-label="Быстрые действия">
- <button type="button" class="op-btn" onclick="window.fireControlUpdater?.open()" title="Проверка обновлений">↻ Обновления <span id="fcUpdateBadge"></span></button>
- <button type="button" class="op-btn" onclick="desktopCreateBackup()">↓ Копия данных</button>
- <button type="button" class="op-btn" onclick="desktopShowDataLocation()">▤ Папка данных</button>
+                <button type="button" class="op-btn" id="fcTopUpdateButton" onclick="window.fireControlUpdater.open()" title="Управление обновлениями">↻ Обновления <span id="fcUpdateBadge" aria-live="polite"></span></button>
                 <button type="button" class="op-btn primary" onclick="copyFireSolution()">⎘ Копировать результат</button>
                 <button type="button" class="op-btn" onclick="toggleCompact()" id="compactToggle">▣ Компактный вид</button>
                 <button type="button" class="op-btn" onclick="saveBookmark()">☆ Сохранить позицию</button>
+                <button type="button" class="op-btn" onclick="desktopCreateBackup()" title="Резервная копия в папке данных Windows">↓ Копия данных</button>
+                <button type="button" class="op-btn" onclick="desktopShowDataLocation()" title="Показать путь к папке данных">▤ Папка данных</button>
                 <label class="op-note" for="themeSelect">Тема:</label>
                 <select class="op-select" id="themeSelect" onchange="setOperationTheme(this.value)"><option value="olive">Олива</option><option value="slate">Сталь</option><option value="amber">Янтарь</option><option value="contrast">Контраст</option></select>
                 <span class="op-note" id="opFeedback" role="status" aria-live="polite">Ctrl+Enter — расчёт · Alt+1…7 — разделы</span>
@@ -1069,18 +1076,21 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff}
               </div>
             </div>
             <div id="archive" class="tab-content"><div class="panel"><h2>▤ История, профили и проверка расчётов</h2>
-<section class="fc-update-panel" id="fcUpdatePanel" aria-label="Обновления приложения">
- <div class="fc-update-head"><div><h3>↻ Обновления Windows-приложения</h3><p class="fc-update-meta">Версия: <strong id="fcInstalledVersion">—</strong> · Подписанные релизы</p></div><button class="op-btn primary" type="button" id="fcCheckUpdateButton">Проверить обновления</button></div>
- <div class="fc-update-status" id="fcUpdateStatus" role="status" aria-live="polite">Инициализация…</div>
- <div class="fc-update-note fc-update-hidden" id="fcUpdateReleaseNotes"></div>
- <progress class="fc-update-progress fc-update-hidden" id="fcUpdateProgress" max="100" value="0"></progress>
- <div class="fc-update-actions">
-  <button class="op-btn primary fc-update-hidden" type="button" id="fcInstallUpdateButton">↓ Скачать и установить</button>
-  <button class="op-btn fc-update-hidden" type="button" id="fcLaterUpdateButton">Позже</button>
-  <label><input type="checkbox" id="fcAutomaticUpdates" checked> Проверять при запуске (без установки)</label>
- </div>
- <p class="fc-update-meta">Обновления устанавливаются только с вашего согласия. Перед установкой сохраняется копия данных, подлинность пакета проверяет Tauri.</p>
-</section>
+              <section class="fc-update-panel" id="fcUpdatePanel" aria-label="Обновления приложения">
+                <div class="fc-update-head">
+                  <div><h3>↻ Обновления Windows-приложения</h3><p class="fc-update-meta">Версия: <strong id="fcInstalledVersion">—</strong> · Канал: подписанные релизы</p></div>
+                  <button type="button" class="op-btn primary" id="fcCheckUpdateButton">Проверить обновления</button>
+                </div>
+                <div class="fc-update-status" id="fcUpdateStatus" role="status" aria-live="polite">Инициализация…</div>
+                <div class="fc-update-note fc-update-hidden" id="fcUpdateReleaseNotes"></div>
+                <progress class="fc-update-progress fc-update-hidden" id="fcUpdateProgress" max="100" value="0"></progress>
+                <div class="fc-update-actions">
+                  <button class="op-btn primary fc-update-hidden" type="button" id="fcInstallUpdateButton">↓ Скачать и установить</button>
+                  <button class="op-btn fc-update-hidden" type="button" id="fcLaterUpdateButton">Позже</button>
+                  <label class="fc-update-check"><input type="checkbox" id="fcAutomaticUpdates" checked> Проверять при запуске (без установки)</label>
+                </div>
+                <p class="fc-update-meta">Перед установкой приложение сохраняет JSON-копию целей, батареи, огневых задач и настроек. Загрузка разрешена только с настроенного HTTPS-источника; установщик проверяется цифровой подписью Tauri.</p>
+              </section>
               <div class="operation-toolbar"><button class="op-btn" onclick="downloadOperations()">↓ Экспорт JSON</button><button class="op-btn" onclick="document.getElementById('opImport').click()">↑ Импорт JSON</button><input id="opImport" type="file" accept="application/json,.json" hidden onchange="importOperations(this)"><button class="op-btn" onclick="runSolverAudit()">✓ Выполнить аудит</button><button class="op-btn" onclick="clearHistory()">× Очистить историю</button></div>
               <h3>Сохранённые позиции</h3><div id="bookmarkList" class="op-muted">Нет сохранённых профилей.</div>
               <h3>Последние расчёты</h3><div style="overflow-x:auto"><table class="op-table"><thead><tr><th>Время</th><th>Режим</th><th>Орудие</th><th>Дальность</th><th>Угол / азимут</th><th>Действие</th></tr></thead><tbody id="historyRows"><tr><td colspan="6">История пуста</td></tr></tbody></table></div>
@@ -1089,152 +1099,219 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff}
 
             <!-- TAB: GUIDE -->
             <div id="guide" class="tab-content">
-                <div class="panel">
-                  <h2>📖 Руководство · функции калькулятора 3.5</h2>
-                  <p class="guide-lead">Здесь описано фактическое поведение калькулятора 3.5. Баллистические таблицы и математическое ядро сохранены из проверенной пользователем версии. Теперь доступны категории и группы целей, линии от всех орудий, сравнение зарядов, таймер, огневые задачи и отдельные JSON-библиотеки.</p>
-                  <div class="sub-tabs">
-                    <button class="sub-tab-btn active" onclick="switchSubTab('g-intro', event)">📋 Начало</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-coords', event)">📍 Координаты</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-m777', event)">🔫 M777</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-m252', event)">💣 M252</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-2b14', event)">🇷🇺 2Б14</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-wind', event)">🌬️ Ветер</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-vt', event)">💥 VT</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-corrections', event)">✛ Корректировки</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-tips', event)">🔍 Проверки</button>
-                    <button class="sub-tab-btn" onclick="switchSubTab('g-command', event)">🗺️ Карта 3.5</button>
-                  </div>
-                  <div id="g-command" class="sub-tab-content"><div class="guide-section"><h3>Тактическая карта и библиотека целей</h3><p>Сохраните орудие и цель с именем. Для новой цели задайте категорию, группу и цвет маркера. Фильтры карты позволяют искать цели по названию, группе и типу; при этом записи не удаляются из памяти.</p><p>Переключатель «Линии всех орудий» рисует направления от сохранённых позиций к активной цели. Двойной клик по маркеру активирует точку и запускает обычный расчёт. Карта отображает координаты, а не рельеф острова.</p><h3>Сравнение зарядов и траекторий</h3><p>Таблица сравнивает только заряды, для которых имеются табличные решения, используя те же исходные математические функции. Кнопка «Выбрать» переносит параметры в текущую форму, не редактируя сохранённую запись орудия.</p><h3>Огневые задачи и таймер</h3><p>Огневая задача хранит копию выбранной позиции орудия, цели, ветра и рассчитанных на тот момент данных. При загрузке происходит новый расчёт по сохранённым входным данным.</p><p>Таймер стартует вручную и использует последнее успешное время полёта; VT отмечается по последней расчётной оценке. Это отсчёт времени в браузере, а не автоматическое определение игрового выстрела.</p><h3>Резервное копирование</h3><p>В панели архива экспорт JSON сохраняет всю рабочую среду. Во вкладке «Тактическая карта» можно отдельно экспортировать и импортировать батарею, цели или огневые задачи; импорт добавляет новые записи. Данные сохраняются в localStorage и синхронизируются между открытыми окнами браузера.</p></div></div>
-                  <div id="g-intro" class="sub-tab-content active">
-                    <div class="guide-section">
-                      <h3>Что есть в этой версии</h3>
-                      <p>Поддерживаются M777 (155 мм), M252 (81 мм) и 2Б14 «Поднос» (82 мм). Расчёт работает по встроенным точкам дальности, интерполяции Catmull–Rom, поправке на разницу высот и дополнительной обработке ветра. <strong>Нельзя считать подтверждённым</strong>, что формулы и CSV полностью идентичны актуальной реализации модов.</p>
-                      <p>В меню сейчас <strong>7 разделов</strong>: «По координатам», «Ручной ввод», «Тактическая карта», «Роза ветров», «Гайд», «Оперативная панель», «История и аудит».</p>
-                      <ul>
-                        <li><strong>Оперативная панель</strong> — последние рассчитанные данные, схема координат и <em>иллюстративная</em> траектория.</li>
-                        <li><strong>История и аудит</strong> — сохранение профилей, загрузка расчётов, экспорт/импорт JSON и внутренние проверки.</li>
-                        <li><strong>Темы/компактный режим</strong> — настройки оформления, не меняющие расчёты.</li>
-                        <li><strong>Корректировки цели</strong> — по востоку/западу и северу/югу с отменой шагов и автоматическим пересчётом. См. вкладку «Корректировки» в гайде.</li>
-                      </ul>
-                      <div class="tip"><strong>Быстрые клавиши:</strong> Ctrl + Enter — расчёт; Alt + 1…6 — разделы в порядке: 1 Координаты, 2 Ручной ввод, 3 Роза ветров, 4 Оперативная панель, 5 История и аудит, 6 Гайд. <strong>Это не порядок пунктов бокового меню.</strong> Переключение темы и компактного режима доступно в панели управления интерфейсом.</div>
-                    </div>
-                    <div class="guide-section">
-                      <h3>Условные обозначения</h3>
-                      <ul>
-                        <li><strong>REQ Азимут</strong> — геометрическое направление на цель: для M777 и M252 шкала <strong>6400</strong> тысячных на круг, для 2Б14 — <strong>6000</strong>.</li>
-                        <li><strong>Угол</strong> — результат интерполяции выбранной таблицы с поправками, а не измерение игровой физики в реальном времени.</li>
-                        <li><strong>Время полёта</strong> — значение из модели таблиц; <strong>VT</strong> — отдельная оценка момента подрыва.</li>
-                        <li><strong>Вне диапазона</strong> — для данной комбинации снаряда, заряда и траектории нет подходящего табличного интервала.</li>
-                      </ul>
-                      <div class="tip"><strong>Исправлено в версии 3.3:</strong> для советского 2Б14 используется шкала 6000 тысячных; для M777 и M252 — 6400. Это применяется к REQ азимуту, выводу азимута с поправкой и геометрической поправке на превышение цели. Ветровые расчёты и коэффициенты оставлены без изменений относительно проверенной версии.</div>
-                    </div>
-                  </div>
-                  <div id="g-coords" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>GRID: что означает каждая цифра</h3>
-                      <p>В обоих полях вводится <strong>по 5 цифр на ось</strong>, например <code>04770</code> и <code>11902</code>. Код превращает строки в целые числа и вычисляет <code>ΔX = Xцели − Xорудия</code>, <code>ΔY = Yцели − Yорудия</code>, дистанцию по Пифагору и азимут через <code>atan2(ΔX, ΔY)</code>. Отдельного перевода единиц или умножения на 10 нет.</p>
-                      <p><strong>Именно внутри этого HTML:</strong> изменение <code>04770</code> на <code>04771</code> изменит X на <strong>1 единицу</strong>, которая в расчёте считается <strong>1 метром</strong>. Старое утверждение «последняя цифра = 10 м» было неверным.</p>
-                      <h4>Пример квадратной сетки</h4>
-                      <p>Если источник показывает координаты <code>047 055</code> как индексы 100-метровых квадратов одной и той же карты, их условный нижний левый угол — <code>04700 / 05500</code>, а центр — <code>04750 / 05550</code>. Это <strong>приближённое правило для такого масштаба сетки</strong>, не универсальное преобразование любых координат «Ориона».</p>
-                      <div class="warning"><strong>Проверьте масштаб источника!</strong> Разные карты, моды и способы отображения GRID могут выдавать 100-, 10- или 1-метровую точность. Если ввести обозначение квадрата как точные метры, результаты будут неверными.</div>
-                      <h4>Как читать результаты</h4>
-                      <ul>
-                        <li><strong>Геометрия</strong> показывает ΔX, ΔY, горизонтальную дистанцию, ΔZ и азимут в градусах.</li>
-                        <li><strong>Диагностика</strong> повторяет введённые координаты орудия и цели; она не проверяет их по карте.</li>
-                        <li>Разницу высот задавайте в одной системе отсчёта для орудия и цели.</li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div id="g-m777" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>M777: встроенные диапазоны дальности</h3>
-                      <p>В этой версии M777 имеет 5 зарядов и таблицы <strong>Low Angle</strong> и <strong>High Angle</strong>. Сведения ниже — границы <em>именно загруженных в HTML</em> таблиц, а не гарантия диапазонов для любого игрового мода.</p>
-                      <div class="guide-table-scroll"><table class="guide-range-table"><thead><tr><th>Заряд</th><th>Low Angle (м)</th><th>High Angle (м)</th></tr></thead><tbody><tr><td>1</td><td>2 000–4 000</td><td>2 800–4 400</td></tr><tr><td>2</td><td>600–7 000</td><td>4 400–7 000</td></tr><tr><td>3</td><td>2 000–10 000</td><td>7 000–10 000</td></tr><tr><td>4</td><td>3 000–15 000</td><td>8 800–15 000</td></tr><tr><td>5</td><td>4 000–18 000</td><td>10 600–18 000</td></tr></tbody></table></div>
-                      <div class="info">Ранее гайд указывал для High Angle заряда 3 верхнюю границу 11 км; в коде таблица заканчивается на <strong>10 000 м</strong>. Исправлено.</div>
-                      <h4>Доступные типы снарядов</h4>
-                      <p>Интерфейс предлагает M107 HE и M767 HE-VT. <strong>Обе опции используют одни и те же таблицы M777</strong>, но для VT дополнительно оценивается момент подрыва. Совпадение этих обозначений и поведения с текущей версией установленного мода не подтверждено.</p>
-                      <p>Автовыбор проверяет заряды от 1 к 5 и берёт первый, для которого дистанция попадает в диапазон выбранной траектории. Это не проверка препятствий на местности и не гарантия попадания.</p>
-                    </div>
-                  </div>
-                  <div id="g-m252" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>M252: отдельные таблицы боеприпасов</h3>
-                      <p>Интерфейс M252 предлагает <strong>кольца 1–4</strong>, только High Angle. Дальности зависят от выбранного HE, Smoke или Illum: переключение типа снаряда меняет таблицу, а не только название.</p>
-                      <div class="guide-table-scroll"><table class="guide-range-table"><thead><tr><th>Кольца</th><th>HE (м)</th><th>Smoke (м)</th><th>Illum (м)</th></tr></thead><tbody><tr><td>1</td><td>100–800</td><td>200–750</td><td>200–750</td></tr><tr><td>2</td><td>200–1 400</td><td>200–1 400</td><td>200–1 400</td></tr><tr><td>3</td><td>300–2 300</td><td>300–1 900</td><td>300–1 900</td></tr><tr><td>4</td><td>400–2 900</td><td>400–2 400</td><td>400–2 400</td></tr></tbody></table></div>
-                      <div class="info"><strong>Важно:</strong> в загруженном HTML нижняя граница HE — 100 м, а Smoke и Illum — 200 м. Их максимальная дальность в текущей таблице — 2400 м, а не 2900 м.</div>
-                      <p>В некоторых внешних материалах по актуальной игре у M252 встречается также нулевой уровень колец. <strong>Эта версия калькулятора его не содержит</strong>; нельзя делать из ограничений интерфейса вывод, что его нет во всех игровых версиях.</p>
-                      <p>Указанные времена полёта относятся к имеющимся табличным значениям. Утверждения о точном сносе ветром без проверки единиц коэффициентов некорректны.</p>
-                    </div>
-                  </div>
-                  <div id="g-2b14" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>2Б14 «Поднос»: доступность зарядов по снаряду</h3>
-                      <p>В интерфейсе есть заряды 0–4 и только High Angle, однако <strong>не каждый заряд имеет таблицу для каждого типа мины</strong>.</p>
-                      <div class="guide-table-scroll"><table class="guide-range-table"><thead><tr><th>Заряд</th><th>HE (м)</th><th>Smoke (м)</th><th>Illum (м)</th></tr></thead><tbody><tr><td>0</td><td>50–500</td><td>50–400</td><td>—</td></tr><tr><td>1</td><td>100–800</td><td>200–800</td><td>100–600</td></tr><tr><td>2</td><td>200–1 400</td><td>300–1 200</td><td>200–1 100</td></tr><tr><td>3</td><td>300–1 800</td><td>400–1 700</td><td>400–1 700</td></tr><tr><td>4</td><td>400–2 300</td><td>—</td><td>400–2 200</td></tr></tbody></table></div>
-                      <p>Символ «—» означает, что в исходном объекте <code>ballisticData</code> отсутствует соответствующая комбинация. Например, для Smoke нет заряда 4, а для Illum — заряда 0. При выборе таких комбинаций программа вернёт «Вне диапазона».</p>
-                      <div class="info"><strong>Шкала углов 2Б14:</strong> подтверждённые в игре <strong>6000 тысячных на полный круг</strong>. Пример: 180° = 3000 тысячных. Для M777 и M252 при тех же 180° результат — 3200 тысячных. Числа <code>elevation</code> в исходных таблицах не масштабируются повторно.</div>
-                    </div>
-                  </div>
-                  <div id="g-wind" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>Как именно обрабатывается ветер</h3>
-                      <p>В этой версии код принимает <strong>направление, откуда дует ветер</strong>: 0° — с севера, 90° — с востока. Он находит боковую составляющую через синус разности направлений, а продольную — через косинус.</p>
-                      <p>Затем численно умножает их на поля <code>cw</code> и <code>lw</code> из выбранной баллистической таблицы; полученное продольное изменение добавляется к эффективной дальности с ограничением табличным диапазоном. Это описание <strong>реализации JavaScript</strong>, но не доказательство, что масштаб и единицы коэффициентов верны для текущей игры.</p>
-                      <div class="warning"><strong>Не проверено:</strong> обозначения <code>cw</code>/<code>lw</code> в исходных объектах не содержат описания единиц. Поэтому нельзя обещать фиксированную поправку вроде «5 м/с = 10–30 mils» или автоматически считать расчёт точным.</div>
-                      <h4>REQ азимут и ветровой азимут</h4>
-                      <p>Главная карточка <strong>REQ Азимут</strong> показывает геометрическое направление <em>без</em> вычисленной ветровой поправки. Отдельный блок «Ветер» показывает итоговый азимут с поправкой. Применяет ли выбранный игровой мод поправку автоматически, следует проверить в самом моде — это не гарантируется HTML.</p>
-                      <h4>Роза ветров</h4>
-                      <p>Синяя линия — направление на цель, красная — направление <em>источника</em> ветра, оранжевая дуга — угол между ними. Визуализация обновляется после расчёта по координатам <strong>или вручную</strong>. Оценочные показатели розы ветров не обязательно совпадают с конкретным выбранным зарядом: у неё отдельный набор вводимых данных.</p>
-                      <div class="info">Текстовая классификация «правый/левый боковой» в коде охватывает также углы ближе к 180°, поэтому это <strong>упрощённая подпись</strong>, а не точное определение типа ветра.</div>
-                    </div>
-                  </div>
-                  <div id="g-vt" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>VT: что показывает таймер</h3>
-                      <p>В интерфейсе режим VT доступен только при выборе <strong>M777 → M767 HE-VT</strong>. Поле высоты подрыва задаётся в метрах <strong>относительно высоты цели</strong>, а <code>peakAlt</code> берётся из баллистической таблицы относительно орудия.</p>
-                      <p>Функция <code>calculateBurstTime()</code> оценивает момент пересечения заданной высоты на нисходящей ветви <strong>по параболическому приближению</strong> с учётом ΔZ. Это не моделирование полного движения снаряда, и время может отличаться от поведения модификации в игре.</p>
-                      <div class="warning"><strong>Условия:</strong> расчёт не отображается, если входные данные некорректны или выбранная точка подрыва выше предполагаемого пика. Отсутствие результата не означает, что игровой снаряд физически не может выполнить такую задачу — это ограничение модели.</div>
-                      <p>Название VT, тип взрывателя и возможность ручного задания времени зависят от реализации мода. В руководстве больше нет утверждений о гарантированном срабатывании на указанной высоте или о подтверждённой «оптимальной» высоте подрыва.</p>
-                    </div>
-                  </div>
-                  <div id="g-corrections" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>✛ Корректировка цели после наблюдения</h3>
-                      <p>В режимах <strong>«По координатам»</strong> и <strong>«Ручной ввод»</strong> под полями положения цели есть блок «Корректировка точки цели». Он переносит <strong>целевую точку</strong> на заданное смещение и запускает <strong>существующий расчёт</strong>, не изменяя баллистические формулы.</p>
-                      <ol>
-                        <li>Выполните первый расчёт и, если нужно, получите новые координаты цели по наблюдению.</li>
-                        <li>В поле <strong>Восток/Запад</strong> введите <code>100</code> для сдвига на 100 м восточнее или <code>-100</code> для 100 м западнее.</li>
-                        <li>В поле <strong>Север/Юг</strong> введите <code>50</code> для 50 м севернее или <code>-50</code> для 50 м южнее. Оба смещения разрешено применять одновременно.</li>
-                        <li>Проверьте строку предварительного просмотра и нажмите <strong>«Применить и пересчитать»</strong> (или <kbd>Ctrl + Enter</kbd>, пока курсор в поле поправок). Поля цели обновятся; новые угол, азимут, заряд, время полёта и VT (если доступен) появятся в стандартных результатах.</li>
-                        <li>Следующая корректировка отсчитывается от уже скорректированной цели. <strong>«Отменить шаг»</strong> возвращает предыдущую точку, <strong>«Вернуть исходную»</strong> — точку до начала серии.</li>
-                      </ol>
-                      <div class="info"><strong>Координатный режим:</strong> коррекция <code>+100 м восточнее</code> увеличит числовую координату GRID X на 100. Это соответствует <em>внутреннему допущению калькулятора</em> «1 единица X/Y = 1 метр»; убедитесь, что ваша карта использует такие же единицы.</div>
-                      <div class="info"><strong>Ручной режим:</strong> угол и дальность в полях автоматически пересчитываются из вектора направления на цель после смещения; вы не обязаны знать координаты карты. Поправка всегда ориентирована по сторонам света, не «влево/вправо» относительно ствола.</div>
-                      <div class="warning"><strong>Ограничения:</strong> коррекции не вычисляют погрешность попадания автоматически и не меняют высоты местности. Если цель на новом участке имеет другую высоту, задайте её отдельно. Если вручную изменить исходные поля цели или загрузить профиль, цепочка отмены сбрасывается. Выход за диапазон баллистической таблицы выдаёт стандартное «Вне диапазона».</div>
-                    </div>
-                  </div>
-                  <div id="g-tips" class="sub-tab-content">
-                    <div class="guide-section">
-                      <h3>Контрольный список при несовпадениях</h3>
-                      <ol>
-                        <li>Сверьте карту, систему координат, масштаб и единицу последней цифры.</li>
-                        <li>Проверьте, что координаты орудия и цели относятся к одной карте, а высоты — к одной системе отсчёта.</li>
-                        <li>Проверьте выбранное орудие, тип снаряда, заряд/кольца и траекторию.</li>
-                        <li>Сверьте, не вышла ли дальность за границы <em>выбранной</em> табличной комбинации.</li>
-                        <li>Проверяйте шкалу: <strong>2Б14 — 6000</strong>, <strong>M777/M252 — 6400</strong>. Угловая система выбирается автоматически по орудию.</li>
-                        <li>Не принимайте оценку VT и ветра за результат испытаний игрового движка.</li>
-                        <li>Помните: вкладка «Диагностика» выводит введённые координаты, а ΔX/ΔY находятся в соседнем блоке «Геометрия».</li>
-                      </ol>
-                      <div class="info"><strong>Почему расстояние не совпадает?</strong> Возможные причины — другой масштаб GRID, неточно выбранные точки и источник высот. Гайд не может без проверки утверждать, что разница 100–150 м вызвана смещением от «центра машины до дульного среза», или что такая ошибка не влияет на угол/азимут.</div>
-                    </div>
-                    <div class="guide-section">
-                      <h3>Что проверяет «Аудит»</h3>
-                      <p>Вкладка «История и аудит» проверяет структуру <strong>35 локальных таблиц</strong>, значения в табличных точках и несколько тестовых случаев VT. Она проверяет также тестовые преобразования 6000/6400 mils, но <strong>не доказывает</strong> совпадение результатов с фактической баллистикой Reforger или единицы коэффициентов <code>cw/lw</code>.</p>
-                      <p><strong>Внешние источники для сверки:</strong> <a href="https://reforger.armaplatform.com/news/dev-report-22" target="_blank" rel="noopener noreferrer">Bohemia: Dev Report #22 (6000/6400 mils)</a>; <a href="https://reforger.armaplatform.com/workshop/686AC479236F235D-M777HowitzerArtillery" target="_blank" rel="noopener noreferrer">Workshop: M777 PandaMods</a>. Они не доказывают происхождение встроенных CSV или совпадение модовой физики с текущим HTML.</p>
-                    </div>
-                  </div>
-                </div>
-            </div>
+  <div class="panel">
+    <h2>📖 Руководство · Fire Control Desktop 3.6.2</h2>
+    <p class="guide-lead">Руководство по Windows-приложению Arma Reforger Fire Control: от первого расчёта до работы с батареей, библиотекой целей и подписанными обновлениями. Расчётное ядро и баллистические таблицы сохранены без изменений.</p>
+    <div class="sub-tabs" aria-label="Темы руководства">
+      <button class="sub-tab-btn active" onclick="switchSubTab('g-intro',event)">🚀 Быстрый старт</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-coords',event)">📍 Координаты</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-weapons',event)">🔫 Орудия</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-wind',event)">🌬️ Ветер / VT</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-corrections',event)">✛ Поправки</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-command',event)">🗺️ Карта и цели</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-battery',event)">▣ Батарея</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-timer',event)">⏱ Таймер и задачи</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-storage',event)">💾 История и данные</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-updates',event)">↻ Обновления</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('g-tips',event)">⌨ Клавиши и помощь</button>
+    </div>
+
+    <div id="g-intro" class="sub-tab-content active">
+      <div class="guide-section">
+        <h3>Первый расчёт — за четыре действия</h3>
+        <ol>
+          <li>Откройте <strong>«По координатам»</strong> и выберите <strong>M777, M252 или 2Б14</strong>.</li>
+          <li>Введите <strong>координаты орудия</strong> и <strong>цели</strong>: X/Y, высоту Z. Для GRID используются пятизначные значения, например <code>04770</code>.</li>
+          <li>Выберите <strong>боеприпас, траекторию и заряд</strong> (или автоматический подбор), укажите ветер.</li>
+          <li>Нажмите кнопку расчёта. Появятся угол, заряд, время полёта, REQ-азимут и дополнительные показатели. Через «Тактическую карту» можно сохранить орудие и цель по имени.</li>
+        </ol>
+        <div class="tip"><strong>Важное различие:</strong> для M777 и M252 используется <strong>6400 тысячных</strong> на круг, для советского 2Б14 — <strong>6000 тысячных</strong>. Пересчёт выполняется автоматически по выбранному орудию.</div>
+      </div>
+      <div class="guide-section">
+        <h3>Разделы программы</h3>
+        <ul>
+          <li><strong>По координатам</strong> — расчёт по местоположению орудия и цели.</li>
+          <li><strong>Ручной ввод</strong> — расчёт по дистанции, азимуту и высотам без GRID.</li>
+          <li><strong>Тактическая карта</strong> — несколько орудий, именованные цели, история, сравнение зарядов, таймер и огневые задачи.</li>
+          <li><strong>Роза ветров</strong> — отдельная визуализация направлений.</li>
+          <li><strong>Оперативная панель</strong> — крупные результаты последнего расчёта и схемы.</li>
+          <li><strong>История и аудит</strong> — профили, история расчётов, общий JSON и центр обновлений.</li>
+          <li><strong>Гайд</strong> — настоящее руководство.</li>
+        </ul>
+        <p>Верхняя панель позволяет копировать результат, сохранить профиль, переключить компактный режим, тему и открыть обновления. Приложение работает офлайн; интернет нужен лишь для проверки и загрузки новых версий.</p>
+      </div>
+    </div>
+
+    <div id="g-coords" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Как устроен GRID</h3>
+        <p>В каждом поле X и Y вводится <strong>пять цифр</strong>. Внутри калькулятора <code>04770</code> трактуется как число 4770: разница на единицу соответствует одному метру <em>в принятой модели координат</em>. Дополнительного умножения на 10 программа не делает.</p>
+        <p>Восток — увеличение X, север — увеличение Y. Дальность определяется через <code>√(ΔX²+ΔY²)</code>; геометрический азимут — от севера по часовой стрелке. Z задаётся отдельно, в одной системе высот для обеих точек.</p>
+        <div class="info">Пример: если цель была <code>07430 / 05000</code> и задано «100 м восточнее», новая X будет <code>07530</code>, Y не изменится. Проверьте, что игровая карта отображает координаты в той же системе.</div>
+        <h4>Режим «Ручной ввод»</h4>
+        <p>Вместо GRID задайте <strong>дальность в метрах</strong>, <strong>азимут в градусах</strong>, высоту орудия и цели. Это удобно, если расстояние и направление уже известны. Ручные поправки по сторонам света здесь также работают.</p>
+      </div>
+      <div class="guide-section">
+        <h3>Что означают результаты</h3>
+        <ul>
+          <li><strong>Угол</strong> — рассчитанное возвышение по выбранной таблице и поправкам.</li>
+          <li><strong>Заряд / кольца</strong> — выбранный либо автоматически найденный вариант.</li>
+          <li><strong>Время полёта</strong> — табличный/интерполированный результат, используемый также таймером.</li>
+          <li><strong>REQ Азимут</strong> — геометрическое направление на цель в шкале текущего орудия; не путайте с отдельным ветровым азимутом.</li>
+          <li><strong>Вне диапазона</strong> — нет подходящего интервала для выбранных снаряда, заряда и траектории.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="g-weapons" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>M777 · 155 мм</h3>
+        <p>Заряды <strong>1–5</strong>, траектории <strong>Low Angle</strong> и <strong>High Angle</strong>. Таблица показывает границы данных <em>внутри калькулятора</em>.</p>
+        <div class="guide-table-scroll"><table><thead><tr><th>Заряд</th><th>Low Angle, м</th><th>High Angle, м</th></tr></thead><tbody>
+          <tr><td>1</td><td>2 000–4 000</td><td>2 800–4 400</td></tr><tr><td>2</td><td>600–7 000</td><td>4 400–7 000</td></tr><tr><td>3</td><td>2 000–10 000</td><td>7 000–10 000</td></tr><tr><td>4</td><td>3 000–15 000</td><td>8 800–15 000</td></tr><tr><td>5</td><td>4 000–18 000</td><td>10 600–18 000</td></tr>
+        </tbody></table></div>
+        <p>Боеприпасы в интерфейсе: <strong>M107 HE</strong> и <strong>M767 HE-VT</strong>. Для VT дополнительно отображается расчётная оценка времени подрыва. Автоматический подбор выбирает первый доступный заряд по таблицам для заданной траектории.</p>
+      </div>
+      <div class="guide-section">
+        <h3>M252 · 81 мм</h3><p>Кольца <strong>1–4</strong>, только High Angle. Таблицы различаются для HE, Smoke и Illum.</p>
+        <div class="guide-table-scroll"><table><thead><tr><th>Кольца</th><th>HE, м</th><th>Smoke, м</th><th>Illum, м</th></tr></thead><tbody>
+          <tr><td>1</td><td>100–800</td><td>200–750</td><td>200–750</td></tr><tr><td>2</td><td>200–1 400</td><td>200–1 400</td><td>200–1 400</td></tr><tr><td>3</td><td>300–2 300</td><td>300–1 900</td><td>300–1 900</td></tr><tr><td>4</td><td>400–2 900</td><td>400–2 400</td><td>400–2 400</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="guide-section">
+        <h3>2Б14 «Поднос» · 82 мм</h3><p>Заряды <strong>0–4</strong>, только High Angle. Не все сочетания заряда и типа мины присутствуют в таблицах.</p>
+        <div class="guide-table-scroll"><table><thead><tr><th>Заряд</th><th>HE, м</th><th>Smoke, м</th><th>Illum, м</th></tr></thead><tbody>
+          <tr><td>0</td><td>50–500</td><td>50–400</td><td>—</td></tr><tr><td>1</td><td>100–800</td><td>200–800</td><td>100–600</td></tr><tr><td>2</td><td>200–1 400</td><td>300–1 200</td><td>200–1 100</td></tr><tr><td>3</td><td>300–1 800</td><td>400–1 700</td><td>400–1 700</td></tr><tr><td>4</td><td>400–2 300</td><td>—</td><td>400–2 200</td></tr>
+        </tbody></table></div>
+        <p>«—» означает отсутствие сочетания во встроенных таблицах. <strong>Шкала 2Б14 — 6000 тысячных на полный круг</strong>: 90° = 1500, 180° = 3000. Для M777/M252: 90° = 1600, 180° = 3200.</p>
+        <div class="tip">Табличные значения угла возвышения не нужно вручную умножать на 6000/6400. Программа сама применяет подходящую шкалу там, где требуется преобразование направления.</div>
+      </div>
+    </div>
+
+    <div id="g-wind" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Ветровая поправка и отдельная роза ветров</h3>
+        <p>Вводится направление, <strong>откуда дует ветер</strong>: 0° — с севера, 90° — с востока, 180° — с юга, 270° — с запада. Скорость — в м/с. Основной расчёт разделяет ветер на боковую и продольную составляющие и использует коэффициенты выбранной баллистической таблицы.</p>
+        <p><strong>REQ-азимут</strong> в результатах — геометрический. Азимут с ветровой поправкой показывается отдельно в ветровом блоке. Не смешивайте эти значения.</p>
+        <p>Вкладка <strong>«Роза ветров»</strong> — визуальный инструмент со своими полями направления, скорости и дистанции. Её оценочные значения не обязаны совпадать с детальными параметрами конкретного заряда; для наведения используйте основной расчёт.</p>
+      </div>
+      <div class="guide-section">
+        <h3>Воздушный подрыв VT</h3>
+        <p>VT доступен для <strong>M777 → M767 HE-VT</strong>. Задайте высоту подрыва относительно цели. Таймер VT рассчитывается оценочно по времени полёта, пиковой высоте из таблицы и разнице высот на нисходящей части условной траектории.</p>
+        <div class="warning"><strong>Ограничение:</strong> VT — приближённое значение модели, а не подтверждение фактического момента срабатывания взрывателя. Если запрошенная высота выходит за расчётную траекторию, результат может отсутствовать. График траектории в «Оперативной панели» также носит иллюстративный характер.</div>
+      </div>
+    </div>
+
+    <div id="g-corrections" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Ручные поправки по сторонам света</h3>
+        <p>Под полями цели в двух режимах есть панель <strong>«Корректировка точки цели»</strong>. Положительное число X означает восток, отрицательное — запад; положительное Y — север, отрицательное — юг.</p>
+        <ol>
+          <li>Укажите смещение, например <code>+100</code> м восточнее и <code>-50</code> м южнее.</li>
+          <li>Проверьте предпросмотр новой точки.</li>
+          <li>Нажмите <strong>«Применить и пересчитать»</strong>. В текущие поля будет записана новая цель, и калькулятор выдаст обновлённые значения.</li>
+          <li>Для следующей поправки задайте новое смещение: оно применяется к <strong>уже скорректированной</strong> точке.</li>
+        </ol>
+        <p><strong>«Отменить шаг»</strong> возвращает предыдущую точку, <strong>«Вернуть исходную»</strong> — состояние до серии поправок. Ручное изменение цели или восстановление другого профиля завершает текущую цепочку отмены.</p>
+        <div class="info">Пример: точка <code>07430 / 05000</code> → <code>+100</code> восток → <code>07530 / 05000</code> → <code>+50</code> север → <code>07530 / 05050</code>.</div>
+        <p>В ручном режиме пересчитываются дальность и азимут по вектору смещения. Высота цели сама не меняется. Автоматического определения поправки из координат попадания в программе нет — это намеренно отдельный от ручных поправок сценарий.</p>
+      </div>
+    </div>
+
+    <div id="g-command" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Тактическая карта и сохранённые цели</h3>
+        <ol>
+          <li>Заполните координаты в разделе <strong>«По координатам»</strong>.</li>
+          <li>Перейдите на <strong>«Тактическую карту»</strong>, задайте название орудия и нажмите <strong>«Сохранить текущее орудие»</strong>.</li>
+          <li>Укажите название цели, выберите категорию, группу и цвет, затем нажмите <strong>«Сохранить текущую цель»</strong>.</li>
+          <li>Кликните по сохранённому маркеру или по кнопке <strong>«Выбрать»</strong> в списке, чтобы сделать цель активной; действие с пересчётом доступно отдельно.</li>
+        </ol>
+        <p>На карте отображаются орудия и цели из библиотеки, активная линия огня и, если включено, история ранее рассчитанных точек. Можно показывать подписи, приближать карту, перетаскивать мышью и возвращаться к центру.</p>
+        <p><strong>Фильтры</strong> по категории, группе и поисковой строке скрывают ненужные маркеры, но не удаляют сохранённые цели. Списки позволяют переименовывать и удалять записи; историю можно перенести в библиотеку.</p>
+        <div class="tip">Это схема координат, а не встроенная карта острова с рельефом, дорогами и зданиями.</div>
+      </div>
+    </div>
+
+    <div id="g-battery" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Несколько орудий и расчёт батареи</h3>
+        <p>Для каждого сохранённого орудия хранятся название, тип, позиция X/Y/Z, снаряд, траектория и заряд. Список батареи позволяет быстро переключать активное орудие без повторного ввода координат.</p>
+        <p>Выберите активную цель и нажмите <strong>«Пересчитать батарею»</strong>. Таблица ниже карты показывает дальность, азимут, угол, заряд и время полёта для всех сохранённых позиций, используя текущие параметры ветра раздела «По координатам».</p>
+        <p>Переключатель <strong>«Линии всех орудий»</strong> выводит на карте линии от сохранённых орудий к выбранной цели. При необходимости откройте строку нужного орудия кнопкой «Использовать».</p>
+      </div>
+      <div class="guide-section">
+        <h3>Сравнение зарядов и траекторий</h3>
+        <p>Блок <strong>«Сравнение зарядов и траекторий»</strong> показывает только те варианты, для которых найдены баллистические данные для текущей дальности, орудия и боеприпаса. Для M777 сопоставляются Low и High Angle; для миномётов доступна предусмотренная таблицами навесная траектория.</p>
+        <p>В таблице указаны угол, время полёта и другие табличные показатели. Кнопка <strong>«Выбрать»</strong> переносит этот вариант в текущий расчёт, но не редактирует ранее сохранённую карточку орудия.</p>
+      </div>
+    </div>
+
+    <div id="g-timer" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Таймер полёта</h3>
+        <p>Сначала выполните успешный расчёт. Нажмите <strong>«Старт»</strong>, чтобы начать отсчёт по последнему времени полёта. Есть кнопки <strong>«Пауза»</strong> и <strong>«Сброс»</strong>; полоска прогресса показывает прошедшее и оставшееся время.</p>
+        <p>Если последний расчёт включал VT, таймер показывает отдельную отметку примерного момента подрыва. <strong>Он не получает событие выстрела из игры</strong> и стартует исключительно по нажатию пользователя.</p>
+      </div>
+      <div class="guide-section">
+        <h3>Сохранённые огневые задачи</h3>
+        <p>Выберите орудие и цель, заполните имя задачи, нажмите <strong>«Сохранить задачу»</strong>. В запись попадут параметры орудия, цели, ветра и снимок рассчитанных данных.</p>
+        <p>По кнопке <strong>«Загрузить»</strong> восстанавливаются сохранённые входные параметры, после чего выполняется новый расчёт. Удаление задачи не обязано удалять цель или орудие из их библиотек.</p>
+      </div>
+    </div>
+
+    <div id="g-storage" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>История расчётов, профили и файлы</h3>
+        <p>Во вкладке <strong>«История и аудит»</strong> доступны последние расчёты, сохранённые профили и кнопки полного экспорта/импорта. Загрузка старого расчёта восстанавливает входные параметры; для актуальных результатов запустите расчёт снова.</p>
+        <p>На <strong>«Тактической карте»</strong> можно отдельно экспортировать <strong>цели</strong>, <strong>орудия</strong>, <strong>огневые задачи</strong> или <strong>всё дополнение</strong> в JSON. Импорт отдельной библиотеки добавляет записи, а не заменяет всю рабочую среду.</p>
+        <p>Приложение хранит состояние локально и создаёт резервные копии в папке пользовательских данных Windows. Сохраняйте экспортированный JSON отдельно, если переносите программу на другой ПК. Данные не публикуются в GitHub автоматически.</p>
+        <div class="warning"><strong>Важно:</strong> удаление истории и удаление сохранённых библиотек — разные действия. Перед переустановкой Windows или сменой компьютера экспортируйте нужные JSON-файлы.</div>
+      </div>
+    </div>
+
+    <div id="g-updates" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Обновление Windows-приложения</h3>
+        <ol>
+          <li>Нажмите <strong>«↻ Обновления»</strong> в верхней панели либо перейдите в <strong>«История и аудит» → «Обновления Windows-приложения»</strong>.</li>
+          <li>Включите <strong>«Проверять при запуске»</strong>, чтобы получать уведомления. Приложение <em>не устанавливает</em> обновления автоматически.</li>
+          <li>Нажмите <strong>«Проверить обновления»</strong>. Если доступна новая версия, изучите описание изменений.</li>
+          <li>Нажмите <strong>«Скачать и установить»</strong> и подтвердите действие. Перед установкой создаётся резервная копия локального состояния.</li>
+          <li>Дождитесь завершения установщика. При следующем запуске новая версия отобразится в центре обновлений.</li>
+        </ol>
+        <div class="tip"><strong>Откуда обновления:</strong> только подписанные релизы официального репозитория <code>123312223a-pixel/Arma-Reforger-Fire-Control</code>. Приложение проверяет цифровую подпись пакета.</div>
+        <p>Если у вас старая предварительная версия <strong>3.6.0</strong>, её нужно <strong>один раз обновить вручную</strong> установщиком с GitHub Releases: в ней ещё не было активного подписанного канала. Начиная с подписанной <strong>3.6.1</strong>, новые версии доступны через центр обновлений.</p>
+        <p><a href="https://github.com/123312223a-pixel/Arma-Reforger-Fire-Control/releases" target="_blank" rel="noopener noreferrer">Открыть официальный список релизов</a></p>
+        <div class="warning"><strong>Если проверка не работает:</strong> убедитесь в доступе к интернету и GitHub. Не скачивайте установщики из неизвестных источников. Если предупреждение Windows SmartScreen появилось при установке, помните: подпись обновления Tauri и сертификат издателя Windows — разные механизмы.</div>
+      </div>
+    </div>
+
+    <div id="g-tips" class="sub-tab-content">
+      <div class="guide-section">
+        <h3>Горячие клавиши</h3>
+        <ul>
+          <li><strong>Ctrl + Enter</strong> — рассчитать активный режим; при фокусе в поле поправок — применить ожидающую ручную поправку.</li>
+          <li><strong>Alt + 1…7</strong> — переключение разделов: 1 Координаты, 2 Ручной ввод, 3 Карта, 4 Роза ветров, 5 Гайд, 6 Оперативная панель, 7 История и аудит.</li>
+          <li><strong>Esc</strong> вне текстового поля — напомнить подсказку по клавишам.</li>
+        </ul>
+        <p>Клавиатурные сочетания действуют внутри активного окна приложения; отдельные сочетания могут перехватываться Windows или другим ПО.</p>
+      </div>
+      <div class="guide-section">
+        <h3>Если не находится расчёт</h3>
+        <ul>
+          <li>Уточните тип орудия, снаряд, траекторию, заряд и диапазон дальности.</li>
+          <li>Проверьте, что координаты X/Y записаны в принятой метровой сетке, а обе высоты Z заданы в одной системе.</li>
+          <li>Для 2Б14 используйте шкалу 6000, для M777/M252 — 6400. Программа переключает её автоматически.</li>
+          <li>Различайте геометрический REQ-азимут и значение с ветровой поправкой.</li>
+          <li>Помните, что график траектории и расчёт VT — приближённые представления, а не копия игровой телеметрии.</li>
+        </ul>
+        <h4>Что делает встроенный аудит</h4>
+        <p>В разделе <strong>«История и аудит»</strong> проверяются структура <strong>35 таблиц</strong>, внутренние математические инварианты и преобразования угловых шкал. Это диагностика целостности калькулятора, а не повторные игровые испытания баллистики.</p>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
     </div>
 
@@ -1935,12 +2012,13 @@ let opMode='coords';
 function opNotify(message){document.getElementById('opFeedback').textContent=message;}
 function opCapture(){const v={};OP_FIELDS.forEach(id=>{const e=document.getElementById(id);if(e)v[id]=e.value;});return v;}
 function opPersist(){
- try {
+ try{
   opState.desktopUpdatedAt=Date.now();
   const json=JSON.stringify(opState);
   localStorage.setItem(OP_KEY,json);
-  if(window.desktopNativeSaveEnabled && typeof window.desktopQueueSave==='function')window.desktopQueueSave(json);
- } catch(e){opNotify('Локальное хранилище недоступно — экспортируйте JSON.');}
+  // The native Windows app additionally keeps a disk copy in AppLocalData.
+  if(window.desktopNativeSaveEnabled && typeof window.desktopQueueSave==='function') window.desktopQueueSave(json);
+ }catch(e){opNotify('Локальное хранилище недоступно — экспортируйте JSON.');}
 }
 function opRestoreInputs(snapshot){
  if(!snapshot||typeof snapshot!=='object')return;
@@ -2010,7 +2088,7 @@ function setupOperations(){try{const saved=JSON.parse(localStorage.getItem(OP_KE
  document.getElementById('coords').addEventListener('change',()=>{opState.inputs=opCapture();opPersist();});document.getElementById('manual').addEventListener('change',()=>{opState.inputs=opCapture();opPersist();});
  document.addEventListener('keydown',e=>{const focus=e.target.closest('input,select,textarea');if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();if(document.getElementById('manual').classList.contains('active'))calculateManual();else calculateCoords();}else if(e.altKey&&/^[1-7]$/.test(e.key)){e.preventDefault();const id=['coords','manual','tactical','windrose','guide','operations','archive'][Number(e.key)-1];const btn=[...document.querySelectorAll('.sidebar-btn')].find(b=>b.getAttribute('onclick')?.includes("'"+id+"'"));if(btn)btn.click();}else if(!focus&&e.key==='Escape'){opNotify('Ctrl+Enter: расчёт · Alt+1…7: разделы');}});
  opRenderArchive();opDraw();}
-// Desktop setup restores durable data before initializing operations.
+// Desktop boot orchestrates setupOperations() after restoring persistent AppLocalData state.
 
 
 // ===== Corrections 3.2: target displacement only. No changes to ballisticData or the solver. =====
@@ -2179,7 +2257,7 @@ function corrSetup(){
     },true);
     corrSave();
 }
-// Desktop setup invokes correction initialization.
+// Desktop boot calls corrSetup() in the original order.
 
 
 /* ===== Tactical map, battery and target library ===== */
@@ -2502,16 +2580,16 @@ function tacEnableDrag(){
  function tacBindFormListeners(){['artX','artY','artZ','tgtX','tgtY','tgtZ','weaponType','shellType','shellType2b14','m777ShellType','trajectory','chargeSelect','cWindSpd','cWindDir'].forEach(id=>{const el=document.getElementById(id); if(!el)return; ['input','change'].forEach(ev=>el.addEventListener(ev,()=>{opState.inputs=opCapture(); opPersist(); tacRenderAll();}));});}
  function tacWrapRestore(fnName){const original=window[fnName]; if(typeof original!=='function')return; window[fnName]=function(){const out=original.apply(this,arguments); setTimeout(()=>{tacEnsureState(); tacRenderAll();},0); return out;};}
  window.tacSetup=function(){tacEnsureState(); tacSyncTabs();tacEnableDrag();tacWrapCalculators(); tacBindFormListeners(); ['loadBookmark','loadHistory'].forEach(tacWrapRestore); tacRenderAll();tacTimerReset();};
- // Desktop setup invokes tactical map initialization.
+ // Desktop boot calls tacSetup() after initializing the libraries.
 })();
 
-/* Tauri desktop persistence; ballistic functions above remain untouched. */
+/* ===== Desktop / Tauri 2 integration (not part of ballistic mathematics) ===== */
 window.desktopNativeSaveEnabled=false;
 let desktopSaveTimer=null;
 let desktopSaveChain=Promise.resolve();
 function desktopNativeInvoke(command,args){
  const invoke=window.__TAURI__?.core?.invoke;
- if(typeof invoke!=='function')return Promise.reject(new Error('Доступно только в Windows-приложении.'));
+ if(typeof invoke!=='function')return Promise.reject(new Error('Работает только в Windows-приложении.'));
  return invoke(command,args||{});
 }
 window.desktopQueueSave=function(json){
@@ -2519,42 +2597,55 @@ window.desktopQueueSave=function(json){
  clearTimeout(desktopSaveTimer);
  desktopSaveTimer=setTimeout(()=>{
   desktopSaveChain=desktopSaveChain.catch(()=>{}).then(()=>desktopNativeInvoke('store_state',{json}));
-  desktopSaveChain.catch(e=>console.warn('Ошибка записи состояния:',e));
+  desktopSaveChain.catch(e=>console.warn('Не удалось записать резервную копию состояния:',e));
  },650);
 };
 window.desktopCreateBackup=async function(){
- try {
-  await desktopNativeInvoke('store_state',{json:JSON.stringify(opState)});
-  const saved=await desktopNativeInvoke('backup_state');
-  opNotify('Резервная копия: '+saved); alert('Копия данных создана:\n'+saved);
- } catch(e){opNotify('Ошибка резервного копирования: '+String(e));}
+ try{
+  const json=JSON.stringify(opState);
+  await desktopNativeInvoke('store_state',{json});
+  const path=await desktopNativeInvoke('backup_state');
+  opNotify('Резервная копия: '+path);
+  alert('Резервная копия создана:\n'+path);
+ }catch(e){opNotify('Не удалось создать копию: '+String(e));}
 };
+// Called by the updater; abort installation if data cannot be safely saved.
 window.backupBeforeUpdate=async function(){
+ const json=JSON.stringify(opState);
  clearTimeout(desktopSaveTimer);
  await desktopSaveChain.catch(()=>{});
- await desktopNativeInvoke('store_state',{json:JSON.stringify(opState)});
- return desktopNativeInvoke('backup_state');
+ await desktopNativeInvoke('store_state',{json});
+ return await desktopNativeInvoke('backup_state');
 };
 window.desktopShowDataLocation=async function(){
- try {const p=await desktopNativeInvoke('get_data_directory');prompt('Путь к данным:',p);}
- catch(e){opNotify('Ошибка: '+String(e));}
+ try{
+  const dir=await desktopNativeInvoke('get_data_directory');
+  prompt('Каталог данных приложения (можно скопировать):',dir);
+ }catch(e){opNotify('Не удалось показать каталог: '+String(e));}
 };
 window.desktopBootAndSetup=async function(){
+ // Webview2/localStorage remains a fast cache; Rust AppLocalData is the durable copy.
  if(window.__TAURI__?.core?.invoke){
-  try {
+  try{
    const disk=await desktopNativeInvoke('load_state');
    if(disk){
     const state=JSON.parse(disk);
     const cachedJson=localStorage.getItem(OP_KEY);
     const cached=cachedJson?JSON.parse(cachedJson):null;
-    if(state&&typeof state==='object'&&!Array.isArray(state)&&(!cached||(state.desktopUpdatedAt||0)>=(cached.desktopUpdatedAt||0)))localStorage.setItem(OP_KEY,disk);
+    // The newer valid snapshot wins if the last WebView write did not reach Rust before exit.
+    if(state && typeof state==='object' && !Array.isArray(state)
+       && (!cached || (state.desktopUpdatedAt||0)>=(cached.desktopUpdatedAt||0))){
+     localStorage.setItem(OP_KEY,disk);
+    }
    }
-  }catch(e){console.warn('AppLocalData недоступен, используется WebView:',e);}
+  }catch(e){console.warn('Данные AppLocalData недоступны, используется локальная копия:',e);}
  }
+ // Preserve initialization order from the original 3.5 HTML.
  setupOperations();
  corrSetup();
  if(typeof window.tacSetup==='function')setTimeout(window.tacSetup,0);
  window.desktopNativeSaveEnabled=true;
+ // First persist also migrates imported browser data to a native file.
  window.desktopQueueSave(JSON.stringify(opState));
 };
 window.addEventListener('load',window.desktopBootAndSetup);
