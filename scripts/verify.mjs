@@ -55,6 +55,17 @@ for(const required of ['mapTrajectory','mapHeightDelta','mapTerrainProfile','map
  assert.ok(html.includes('id="'+required+'"'),'Missing map UI: '+required);
 }
 console.log('OK: M777 trajectory selection, terrain chart and Delta Z user interface');
+for(const id of ['mapQuickElevation','mapQuickCharge','mapQuickDistance','mapQuickAzimuth','mapQuickTime',
+ 'mapShellSelect','mapChargeSelect','mapBurstHeight','mapWindSpeed','mapWindDir',
+ 'mapCorrEast','mapCorrNorth','mapRangeRings','mapRangeStatus']){
+ assert.ok(html.includes('id="'+id+'"'),'Map cockpit UI missing '+id);
+}
+const cockpitCode=fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8');
+for(const method of ['mapAimSettingChanged','syncMapWeapons','drawRangeCircles','quickSolution','mapAimCorrectTarget','mapAimToggleRings']){
+ assert.ok(cockpitCode.includes(method),'Map cockpit logic missing '+method);
+}
+assert.ok(html.includes('window.mapAimGetRangeEnvelope'),'Original ballistics table range metadata not exposed');
+console.log('OK: unified map equipment controls, pinned solutions and range ring support');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
 

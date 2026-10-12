@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.7.6 — Desktop</title>
+<title>Arma Reforger Fire Control 3.7.7 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -541,6 +541,22 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 @media(max-width:540px){.ux-steps,.ux-steps-3{grid-template-columns:1fr 1fr}.ux-steps button{padding:8px;min-height:53px}.ux-steps b{min-width:28px;width:28px;height:28px}.ux-header.header{padding:18px}.ux-context{padding:13px}.ux-context-pills{width:100%}.ux-actions .op-btn{flex:1 1 45%}.ux-steps strong{font-size:.78rem}.sidebar{grid-template-columns:1fr 1fr}.sidebar-btn kbd,.ux-nav-copy small{display:none}.sidebar-btn{min-height:44px}.sidebar-btn .icon{min-width:20px;width:20px}}
 @media print{.ux-steps,.ux-context,.ux-format-hint,.ux-nav-footer{display:none!important}}
 
+/* v3.7.7 map command workspace: pinned outputs and compact inputs. */
+.map-aim-quickbar{position:sticky;top:6px;z-index:12;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:10px;background:rgba(16,31,24,.98);border:1px solid #73936c;border-radius:9px;box-shadow:0 6px 18px #0009;margin:8px 0 14px}
+.map-aim-quickbar>div{min-width:0;display:flex;flex-direction:column;gap:3px;padding:6px 8px;background:#203528;border-radius:6px}
+.map-aim-quickbar small{font-size:.66rem;color:#c5d7ba;letter-spacing:.04em}
+.map-aim-quickbar strong{color:#e9f4d6;font-size:1rem;overflow-wrap:anywhere}
+.map-aim-quickstate{grid-column:1/-1;font-size:.77rem;color:#c8dfb8}
+.map-aim-result{position:sticky;top:143px;z-index:5;margin-top:0!important;box-shadow:0 6px 20px #0005}
+.map-aim-layout>div:last-child{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.map-aim-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.map-aim-extra-settings{border:1px solid #475e48;border-radius:7px;margin:7px 0;padding:9px}
+.map-aim-extra-settings>summary{cursor:pointer;color:#d6ecd0;font-weight:700;margin-bottom:7px}
+.map-aim-range-readout{padding:9px 11px;border:1px solid #5d8266;border-radius:6px;background:#203827;font-size:.79rem;color:#dbead7;line-height:1.5}
+@media(max-width:1100px){.map-aim-result{position:static}.map-aim-quickbar{top:0}}
+@media(max-width:720px){.map-aim-quickbar{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:5px}.map-aim-quickbar>div{padding:4px}.map-aim-quickbar strong{font-size:.85rem}.map-aim-quickbar small{font-size:.57rem}}
+@media(max-width:560px){.map-aim-form-grid{grid-template-columns:1fr}.map-aim-quickbar{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 /* Map-guided mode — independent presentation layer, not part of ballistic solver. */
 .map-aim-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(285px,.8fr);gap:18px;align-items:start}
 .map-aim-surface{background:#0d1b15;border:1px solid #476149;border-radius:9px;overflow:hidden}
@@ -578,7 +594,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 <body>
 <div class="container">
     <header class="header ux-header">
-        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.7.0</span></div>
+        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.7.7</span></div>
         <h1>Панель управления расчётами</h1>
         <p>Координаты, расчёт, цели и батарея — в одном интерфейсе. Расчёты используют проверенные игровые таблицы.</p>
     </header>
@@ -650,6 +666,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                   <button type="button" class="op-btn" onclick="mapAimResetView()">⌖ Вся карта</button>
                   <span class="op-pill" id="mapZoomLabel">1×</span>
                 </div>
+                <div class="map-aim-quickbar" role="status" aria-live="polite" aria-label="Текущие установки по карте">
+                  <div><small>ДАЛЬНОСТЬ</small><strong id="mapQuickDistance">—</strong></div>
+                  <div><small>АЗИМУТ</small><strong id="mapQuickAzimuth">—</strong></div>
+                  <div><small>УГОЛ</small><strong id="mapQuickElevation">—</strong></div>
+                  <div><small>ЗАРЯД / КОЛЬЦА</small><strong id="mapQuickCharge">—</strong></div>
+                  <div><small>ВРЕМЯ</small><strong id="mapQuickTime">—</strong></div>
+                  <span id="mapQuickState" class="map-aim-quickstate">Поставьте орудие и цель</span>
+                </div>
                 <div class="map-aim-layout">
                   <div>
                     <div class="map-aim-surface">
@@ -678,6 +702,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                     </div>
                   </div>
                   <div>
+                    <div class="map-aim-result" aria-live="polite">
+                      <h3>Решение по выбранной цели</h3>
+                      <div class="map-aim-status" id="mapAimStatus">Выберите точку орудия и точку цели.</div>
+                      <div class="map-aim-kv"><span>Угол возвышения</span><strong class="map-aim-primary" id="mapResultElev">—</strong></div>
+                      <div class="map-aim-kv"><span>Заряд / кольца</span><strong id="mapResultCharge">—</strong></div>
+                      <div class="map-aim-kv"><span>Время полёта</span><strong id="mapResultTof">—</strong></div>
+                      <div class="map-aim-actions"><button type="button" class="op-btn primary" onclick="mapAimRecalculate()">↻ Пересчитать</button><button type="button" class="op-btn" onclick="mapAimSaveTarget()">☆ Сохранить цель</button><button type="button" class="op-btn" onclick="mapAimSaveWeapon()">▣ Сохранить орудие</button><button type="button" class="op-btn" onclick="copyFireSolution()">⎘ Копировать решение</button></div>
+                    </div>
                     <div class="map-aim-details" style="margin-top:0">
                       <h3>Параметры для расчёта</h3>
                       <div class="form-group"><label for="mapWeaponType">Орудие</label><select id="mapWeaponType" onchange="mapAimChangeWeapon(this.value)"><option value="m777">M777</option><option value="m252">M252</option><option value="2b14">2Б14 «Поднос»</option></select></div>
@@ -689,6 +721,46 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                         </select>
                         <small id="mapTrajectoryHint" class="map-aim-muted">Выбранная траектория применяется к расчёту по карте и по координатам. Для миномётов используется только High Angle.</small>
                       </div>
+                      <div class="map-aim-form-grid">
+                        <div class="form-group">
+                          <label for="mapShellSelect" id="mapShellLabel">Тип снаряда</label>
+                          <select id="mapShellSelect" onchange="mapAimSettingChanged('shell',this.value)"></select>
+                        </div>
+                        <div class="form-group">
+                          <label for="mapChargeSelect" id="mapChargeLabel">Заряд / кольца</label>
+                          <select id="mapChargeSelect" onchange="mapAimSettingChanged('chargeSelect',this.value)"></select>
+                        </div>
+                      </div>
+                      <div class="form-group" id="mapBurstHeightGroup" hidden>
+                        <label for="mapBurstHeight">Высота подрыва VT, м</label>
+                        <input id="mapBurstHeight" type="number" min="5" max="200" step="1" onchange="mapAimSettingChanged('burstHeight',this.value)">
+                      </div>
+                      <details class="map-aim-extra-settings" open>
+                        <summary>🌬 Ветер и условия</summary>
+                        <div class="map-aim-form-grid">
+                          <div class="form-group"><label for="mapWindSpeed">Скорость ветра, м/с</label><input id="mapWindSpeed" type="number" min="0" max="50" step="0.5" onchange="mapAimSettingChanged('cWindSpd',this.value)"></div>
+                          <div class="form-group"><label for="mapWindDir">Откуда дует, °</label><input id="mapWindDir" type="number" min="0" max="360" step="1" onchange="mapAimSettingChanged('cWindDir',this.value)"></div>
+                        </div>
+                      </details>
+                      <details class="map-aim-extra-settings">
+                        <summary>✛ Ручная корректировка цели (С / Ю / В / З)</summary>
+                        <p class="map-aim-muted">Смещение переносит метку цели; после применения решение и круги обновляются. Это не поправка на ветер.</p>
+                        <div class="map-aim-form-grid">
+                          <div class="form-group"><label for="mapCorrEast">Восток (+) / Запад (−), м</label><input id="mapCorrEast" type="number" step="1" onchange="mapAimCorrectionInput('cCorrEast',this.value)"></div>
+                          <div class="form-group"><label for="mapCorrNorth">Север (+) / Юг (−), м</label><input id="mapCorrNorth" type="number" step="1" onchange="mapAimCorrectionInput('cCorrNorth',this.value)"></div>
+                        </div>
+                        <div class="map-aim-form-grid">
+                          <div class="form-group"><label for="mapCorrStep">Шаг корректировки, м</label><select id="mapCorrStep" onchange="mapAimCorrectionInput('cCorrStep',this.value)"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option></select></div>
+                        </div>
+                        <div class="map-aim-actions">
+                          <button type="button" class="op-btn" onclick="mapAimCorrectTarget()">✓ Применить смещение</button>
+                          <button type="button" class="op-btn" onclick="mapAimUndoCorrection()">↶ Отменить шаг</button>
+                          <button type="button" class="op-btn" onclick="mapAimClearCorrection()">× Очистить смещение</button>
+                        </div>
+                        <p class="map-aim-muted" id="mapCorrectionStatus" role="status">Поправки относятся к цели и синхронизированы с расчётом по координатам.</p>
+                      </details>
+                      <div class="map-aim-range-readout" id="mapRangeStatus" role="status">Поставьте орудие — появятся круги табличной дальности.</div>
+                      <div class="map-aim-actions" style="gap:11px;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="mapRangeRings" checked onchange="mapAimToggleRings(this.checked)" style="width:auto"> Показать круги дальности</label></div>
                       <div class="form-row"><div class="form-group"><label for="mapGunZ">Высота орудия, м</label><input type="number" id="mapGunZ" step="any" onchange="mapAimSetHeight('gun',this.value)"></div><div class="form-group"><label for="mapTargetZ">Высота цели, м</label><input type="number" id="mapTargetZ" step="any" onchange="mapAimSetHeight('target',this.value)"></div></div>
                       <div class="form-row" style="margin:4px 0 12px">
                         <label style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="mapAutoGunZ" checked onchange="mapAimToggleAutoHeight('gun',this.checked)" style="width:auto;flex:none"> Авто Z орудия</label>
@@ -701,8 +773,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                         <input type="file" id="mapHeightFile" accept=".json,application/json" hidden onchange="mapAimImportTerrain(this)">
                       </div>
                       <p class="map-aim-muted">Если высоты не загружаются, <a href="https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/everon_height.json" target="_blank" rel="noopener noreferrer">скачайте JSON карты высот</a> через браузер и импортируйте его кнопкой выше. В Windows запрос выполняется через нативный HTTPS-клиент Tauri без ограничений CORS.</p>
-                      <p class="map-aim-muted">Рельеф Эверона: источник <a href="https://github.com/GeNeFRAG/ArmaReforger" target="_blank" rel="noopener noreferrer">GeNeFRAG</a>, сетка приблизительно 10 × 10 м. Авто Z — высота <strong>поверхности</strong>, не высота крыши или орудия над землёй. Снимите галочку «Авто Z», чтобы задать высоту вручную. При недоступности рельефа текущие значения Z сохраняются. Для собственных изображений авто Z отключается. Снаряд, заряд и ветер используются из вкладки «По координатам».</p>
-                      <button type="button" class="op-btn" onclick="uxGoTab('coords')">⚙ Снаряд, ветер и ручные поправки →</button>
+                      <p class="map-aim-muted">Рельеф Эверона: источник <a href="https://github.com/GeNeFRAG/ArmaReforger" target="_blank" rel="noopener noreferrer">GeNeFRAG</a>, сетка приблизительно 10 × 10 м. Авто Z — высота <strong>поверхности</strong>, не высота крыши или орудия над землёй. Снимите галочку «Авто Z», чтобы задать высоту вручную. При недоступности рельефа текущие значения Z сохраняются. Для собственных изображений авто Z отключается. Снаряд, заряд, кольца, ветер и траекторию можно настроить прямо здесь; настройки синхронизированы с режимом «По координатам».</p>
+                      <button type="button" class="op-btn" onclick="uxGoTab('coords')">↗ Дополнительные настройки по координатам</button>
                       <div class="map-aim-kv"><span>Орудие · GRID</span><strong id="mapGunGrid">—</strong></div>
                       <div class="map-aim-kv"><span>Цель · GRID</span><strong id="mapTargetGrid">—</strong></div>
                       <div class="map-aim-kv"><span>Дальность по горизонтали</span><strong id="mapDistance">—</strong></div>
@@ -718,14 +790,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                       </svg>
                       <p class="map-aim-muted" id="mapTerrainProfileSummary">Профиль построен по высотам земли. Это не баллистическая траектория и не проверка препятствий.</p>
                     </section>
-                    <div class="map-aim-result" aria-live="polite">
-                      <h3>Решение по выбранной цели</h3>
-                      <div class="map-aim-status" id="mapAimStatus">Выберите точку орудия и точку цели.</div>
-                      <div class="map-aim-kv"><span>Угол возвышения</span><strong class="map-aim-primary" id="mapResultElev">—</strong></div>
-                      <div class="map-aim-kv"><span>Заряд / кольца</span><strong id="mapResultCharge">—</strong></div>
-                      <div class="map-aim-kv"><span>Время полёта</span><strong id="mapResultTof">—</strong></div>
-                      <div class="map-aim-actions"><button type="button" class="op-btn primary" onclick="mapAimRecalculate()">↻ Пересчитать</button><button type="button" class="op-btn" onclick="mapAimSaveTarget()">☆ Сохранить цель</button><button type="button" class="op-btn" onclick="mapAimSaveWeapon()">▣ Сохранить орудие</button><button type="button" class="op-btn" onclick="copyFireSolution()">⎘ Копировать решение</button></div>
-                    </div>
+                    
                   </div>
                 </div>
               </div>
@@ -2293,6 +2358,24 @@ window.addEventListener('load', function() {
 });
 
 // ===== Operational extensions: the source solver and tables above remain unchanged. =====
+
+// UI-only lookup for radius rings: read ORIGINAL charge/shell/trajectory tables.
+// Do not use this to alter the ballistic solution or estimate range beyond tables.
+window.mapAimGetRangeEnvelope=function(weapon,shell,trajectory,charge){
+ const values=[];
+ const all=weapon==='m777'?[1,2,3,4,5]:weapon==='m252'?[1,2,3,4]:weapon==='2b14'?[0,1,2,3,4]:[];
+ for(const c of all){
+  if(charge!=='auto'&&String(c)!==String(charge))continue;
+  const key=weapon==='m777'?'m777_'+c+'_'+trajectory:weapon+'_'+shell+'_'+c;
+  const data=ballisticData[key]?.data;
+  if(!Array.isArray(data)||data.length<2)continue;
+  const lo=data[0].range,hi=data[data.length-1].range;
+  if(Number.isFinite(lo)&&Number.isFinite(hi)&&hi>0)values.push({charge:c,min:lo,max:hi});
+ }
+ return {ranges:values,min:values.length?Math.min(...values.map(x=>x.min)):null,
+ max:values.length?Math.max(...values.map(x=>x.max)):null};
+};
+
 const OP_KEY='reforger_ops_v3';
 const OP_FIELDS=['weaponType','shellType','shellType2b14','m777ShellType','burstHeight','artX','artY','artZ','tgtX','tgtY','tgtZ','cWindSpd','cWindDir','trajectory','chargeSelect','mWeaponType','mShellType','mShellType2b14','mM777ShellType','mBurstHeight','mDist','mAz','mArtZ','mTgtZ','mWindSpd','mWindDir','mTraj','mCharge','wrAzimuth','wrWindDir','wrWindSpd','wrRange','cCorrEast','cCorrNorth','cCorrStep','mCorrEast','mCorrNorth','mCorrStep'];
 let opState={theme:'olive',compact:false,history:[],bookmarks:[],inputs:{}};

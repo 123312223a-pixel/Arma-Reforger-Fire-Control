@@ -15,4 +15,8 @@ assert.ok(js.includes('mapTerrainProfileStatus') && js.includes('mapTerrainProfi
  'Terrain profile DOM renderer missing from Vite output');
 assert.ok(js.includes('sampleElevationProfile') || js.includes('sampleSpacing'),
  'Terrain sampling missing from Vite output');
+assert.ok(js.includes('mapAimSettingChanged'),'Map weapon settings controller missing in bundle');
+assert.ok(js.includes('mapQuickElevation') && js.includes('mapRangeStatus'),
+ 'Map pinned status/range display missing in bundle');
+assert.ok(js.includes('mapAimToggleRings'),'Range ring visibility control missing in bundle');
 console.log('OK: interactive map code is present in Vite bundle');

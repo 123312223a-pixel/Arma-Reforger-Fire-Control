@@ -237,6 +237,7 @@ function st(){if(!opState.mapAim||typeof opState.mapAim!=='object')opState.mapAi
  if(!Array.isArray(a.refs)||a.refs.length!==2)a.refs=fresh().refs;
  if(typeof a.image!=='string'||a.image.length>1800000||a.image&&!a.image.startsWith('data:image/jpeg;base64,'))a.image='';
  if(!['topo','satellite','fogless','grid'].includes(a.layer))a.layer='topo';
+ if(typeof a.showRangeRings!=='boolean')a.showRangeRings=true;
  a.zoom=clamp(+a.zoom||1,1,16);a.cx=clamp(+a.cx||400,0,800);a.cy=clamp(+a.cy||400,0,800);
  return a;}
 const isxy=q=>q&&Number.isFinite(q.x)&&Number.isFinite(q.y)&&q.x>=0&&q.y>=0&&q.x<=S&&q.y<=S;
@@ -261,6 +262,7 @@ function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,
  if(major){if(px.x>=v.x&&px.x<=v.x+v.size)svg.append(el('text',{x:px.x+5/z,y:v.y+16/z,fill:'#e9f2d5','font-size':11/z,'paint-order':'stroke',stroke:'#182720','stroke-width':2.5/z},String(n)));
  if(py.y>=v.y&&py.y<=v.y+v.size)svg.append(el('text',{x:v.x+5/z,y:py.y-4/z,fill:'#e9f2d5','font-size':11/z,'paint-order':'stroke',stroke:'#182720','stroke-width':2.5/z},String(n)));}}
  svg.append(el('rect',{x:0,y:0,width:B,height:B,fill:'none',stroke:'#e1f1ce','stroke-opacity':.5,'stroke-width':2/z}));
+ drawRangeCircles(svg);
  const gun=xy('gun'),target=xy('target'),p=gun&&toPixel(gun),q=target&&toPixel(target);
  if(p&&q)svg.append(el('line',{x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:'#70c7f7','stroke-width':2.6/z,'stroke-dasharray':`${7/z} ${5/z}`}));
  for(const [name,point,color] of [['ОРУДИЕ',p,'#96e7a4'],['ЦЕЛЬ',q,'#ff957e']]){if(!point)continue;
@@ -377,17 +379,154 @@ function drawTerrainProfile(){
     ' Не является траекторией снаряда или проверкой препятствий.';
 }
 
+
+function mapSourceShellId(){
+ const weapon=$('weaponType').value;
+ return weapon==='m777'?'m777ShellType':weapon==='m252'?'shellType':'shellType2b14';
+}
+function syncMapSelect(controlId,sourceId){
+ const control=$(controlId),source=$(sourceId);
+ if(!control||!source)return;
+ const stamp=Array.from(source.options,o=>o.value+'\u0000'+o.textContent).join('\u0001');
+ if(control.dataset.syncStamp!==stamp){
+  control.replaceChildren(...Array.from(source.options,o=>o.cloneNode(true)));
+  control.dataset.syncStamp=stamp;
+ }
+ control.value=source.value;
+}
+function syncMapWeapons(){
+ if(!$('mapWeaponType'))return;
+ const weapon=$('weaponType').value;
+ $('mapWeaponType').value=weapon;
+ updateMapTrajectory();
+ syncMapSelect('mapShellSelect',mapSourceShellId());
+ syncMapSelect('mapChargeSelect','chargeSelect');
+ $('mapShellLabel').textContent='Снаряд · '+(weapon==='m777'?'M777':weapon==='m252'?'M252':'2Б14');
+ $('mapChargeLabel').textContent=weapon==='m252'?'Кольца':'Заряд';
+ const vt=weapon==='m777'&&$('m777ShellType').value==='vt';
+ $('mapBurstHeightGroup').hidden=!vt;
+ for(const [mapId,src] of [
+  ['mapBurstHeight','burstHeight'],['mapWindSpeed','cWindSpd'],['mapWindDir','cWindDir'],
+  ['mapCorrEast','cCorrEast'],['mapCorrNorth','cCorrNorth']]){
+  const field=$(mapId),original=$(src);
+  if(field&&original&&document.activeElement!==field)field.value=original.value;
+ }
+ syncMapSelect('mapCorrStep','cCorrStep');
+ $('mapRangeRings').checked=st().showRangeRings!==false;
+}
+function tableRange(){
+ const weapon=$('weaponType')?.value||'m777';
+ const shell=$(mapSourceShellId())?.value||'he';
+ const trajectory=weapon==='m777'?$('trajectory').value:'high';
+ const charge=$('chargeSelect')?.value||'auto';
+ const envelope=window.mapAimGetRangeEnvelope?.(weapon,shell,trajectory,charge);
+ return envelope && Array.isArray(envelope.ranges)?envelope:{ranges:[],min:null,max:null};
+}
+function rangeUi(){
+ const label=$('mapRangeStatus');if(!label)return;
+ const range=tableRange(),gun=xy('gun'),target=xy('target');
+ if(range.max===null){label.textContent='Нет таблицы дальностей для этих параметров.';return;}
+ const fmtMeters=v=>Math.round(v).toLocaleString('ru-RU')+' м';
+ let statement='Табличная дальность: '+fmtMeters(range.min)+' — '+fmtMeters(range.max)+
+  '. '+($('chargeSelect').value==='auto'?'Авто: все допустимые заряды.':'Выбранный заряд: '+$('chargeSelect').value+'.');
+ if(gun&&target){
+  const distance=Math.hypot(target.x-gun.x,target.y-gun.y);
+  const valid=range.ranges.some(a=>distance>=a.min&&distance<=a.max);
+  statement+=' Цель '+(valid?'в табличном интервале.':'вне доступных интервалов.');
+ }
+ statement+=' Круги показывают горизонтальную дальность, не гарантируют возможность выстрела.';
+ label.textContent=statement;
+}
+function drawRangeCircles(svg){
+ const gun=xy('gun');
+ if(!gun||st().showRangeRings===false)return;
+ const envelope=tableRange();
+ if(!Number.isFinite(envelope.max)||envelope.max<=0)return;
+ const pixel=toPixel(gun),zoom=st().zoom;
+ if(!pixel)return;
+ // World SVG is 800 units wide; the game world spans 12 800 metres.
+ // Rings reflect horizontal ranges of the ORIGINAL source tables.
+ const scales=[.25,.5,.75,1];
+ for(const fraction of scales){
+  const metres=Math.round(envelope.max*fraction),r=metres/S*B;
+  svg.append(el('circle',{cx:pixel.x,cy:pixel.y,r,
+   stroke:fraction===1?'#f8d27a':'#9fd3a6',
+   'stroke-width':(fraction===1?2.5:1.1)/zoom,
+   'stroke-dasharray':fraction===1?'none':String(6/zoom)+' '+String(5/zoom),
+   'stroke-opacity':fraction===1?.95:.68,'fill':'none','pointer-events':'none'}));
+  const ty=pixel.y-r;
+  // Labels always align with the world map and zoom consistently.
+  svg.append(el('text',{x:pixel.x+8/zoom,y:ty-5/zoom,
+   fill:fraction===1?'#ffe89c':'#e3f5d6',
+   'font-size':(fraction===1?14:12)/zoom,'font-weight':fraction===1?700:500,
+   stroke:'#0a1b12','stroke-width':3/zoom,'paint-order':'stroke',
+   'pointer-events':'none'},
+   (metres/1000).toLocaleString('ru-RU',{maximumFractionDigits:2})+' км'+(fraction===1?' МАКС':'')
+  ));
+ }
+}
+function quickSolution(valid){
+ const map={
+  mapQuickDistance:$('mapDistance').textContent,
+  mapQuickAzimuth:$('mapBearingMils').textContent,
+  mapQuickElevation:valid?$('mapResultElev').textContent:'—',
+  mapQuickCharge:valid?$('mapResultCharge').textContent:'—',
+  mapQuickTime:valid?$('mapResultTof').textContent:'—'
+ };
+ for(const [id,value] of Object.entries(map))if($(id))$(id).textContent=value;
+ $('mapQuickState').textContent=valid
+  ?$('mapWeaponType').selectedOptions[0]?.textContent+' · '+$('mapTrajectory').value.toUpperCase()+
+    ' · '+$('mapAimStatus').textContent
+  :$('mapAimStatus').textContent;
+}
+window.mapAimSettingChanged=(field,value)=>{
+ const sourceId=field==='shell'?mapSourceShellId():field,control=$(sourceId);
+ if(!control)return;
+ control.value=String(value);
+ if(control.value!==String(value)){syncMapWeapons();return;}
+ control.dispatchEvent(new Event('input',{bubbles:true}));
+ control.dispatchEvent(new Event('change',{bubbles:true}));
+ if(field==='shell'&&typeof updateBurstVisibility==='function')updateBurstVisibility();
+ syncMapWeapons();
+ render();solve();
+};
+window.mapAimCorrectionInput=(field,value)=>{
+ const control=$(field);if(!control)return;
+ control.value=value;
+ control.dispatchEvent(new Event('input',{bubbles:true}));
+ control.dispatchEvent(new Event('change',{bubbles:true}));
+};
+function finishCorrection(label){
+ syncAutoTerrain();syncMapWeapons();render();solve();
+ $('mapCorrectionStatus').textContent=label;
+}
+window.mapAimCorrectTarget=()=>{
+ corrApply('coords');
+ finishCorrection($('cCorrFeedback')?.textContent||'Корректировка обработана.');
+};
+window.mapAimUndoCorrection=()=>{
+ corrUndo('coords');
+ finishCorrection($('cCorrFeedback')?.textContent||'Поправка отменена.');
+};
+window.mapAimClearCorrection=()=>{
+ corrClearInput('coords');syncMapWeapons();
+ $('mapCorrectionStatus').textContent='Ожидающее смещение очищено.';
+};
+window.mapAimToggleRings=show=>{st().showRangeRings=!!show;opPersist();render();rangeUi();};
+
 function stats(){const gun=xy('gun'),target=xy('target');$('mapGunGrid').textContent=fmt(gun);$('mapTargetGrid').textContent=fmt(target);
+ syncMapWeapons();rangeUi();
  updateMapTrajectory();formatHeightDelta();drawTerrainProfile();
  $('mapWeaponType').value=$('weaponType').value;$('mapGunZ').value=$('artZ').value;$('mapTargetZ').value=$('tgtZ').value;
  if(!gun||!target){for(const id of ['mapDistance','mapBearingDegrees','mapBearingMils'])$(id).textContent='—';return;}
  const dx=target.x-gun.x,dy=target.y-gun.y,deg=((Math.atan2(dx,dy)*180/Math.PI)+360)%360,weapon=$('weaponType').value;
  $('mapDistance').textContent=Math.round(Math.hypot(dx,dy))+' м';$('mapBearingDegrees').textContent=deg.toFixed(2)+'°';$('mapBearingMils').textContent=degreesToMils(deg,weapon)+' / '+milsPerCircle(weapon);
 }
-function solve(){const a=xy('gun'),b=xy('target');stats();if(!a||!b||Math.hypot(b.x-a.x,b.y-a.y)<1){status('Выберите две разные позиции на карте.','mapAimStatus');return;}
+function solve(){const a=xy('gun'),b=xy('target');stats();if(!a||!b||Math.hypot(b.x-a.x,b.y-a.y)<1){status('Выберите две разные позиции на карте.','mapAimStatus');quickSolution(false);return;}
  window.calculateCoords();const valid=opValid('coords');$('mapResultElev').textContent=valid?$('cResElev').textContent.trim()+' тыс.':'—';
  $('mapResultCharge').textContent=valid?$('cResCharge').textContent.trim():'—';$('mapResultTof').textContent=valid?$('cResTof').textContent.trim()+' с':'—';
  status(valid?'✓ Решение рассчитано по проверенной таблице.':'Для выбранного расстояния и орудия табличное решение не найдено.','mapAimStatus');
+ quickSolution(valid);
 }
 function pointAt(e){const svg=$('mapAimSvg'),ctm=svg.getScreenCTM();if(!ctm)return null;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const r=point.matrixTransform(ctm.inverse());return {x:r.x,y:r.y};}
 function calibrate(tool,p){if(!st().image){status('Для онлайн-слоя калибровка не требуется. Загрузите свою карту.','mapCalibrationStatus');return;}const i=tool==='ref1'?0:1,x=Number($(`mapRef${i+1}X`).value),y=Number($(`mapRef${i+1}Y`).value),a=st();
@@ -414,7 +553,7 @@ window.mapAimSetTool=tool=>{if(!['gun','target','pan','ref1','ref2'].includes(to
 };
 window.mapAimZoom=factor=>{const a=st();a.zoom=clamp(Math.round(a.zoom*factor*100)/100,1,16);render();opPersist();};
 window.mapAimResetView=()=>{const a=st();a.zoom=1;a.cx=400;a.cy=400;opPersist();render();};
-window.mapAimChangeWeapon=type=>{if(!['m777','m252','2b14'].includes(type))return;$('weaponType').value=type;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));updateMapTrajectory();render();solve();};
+window.mapAimChangeWeapon=type=>{if(!['m777','m252','2b14'].includes(type))return;$('weaponType').value=type;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));syncMapWeapons();render();solve();};
 window.mapAimChangeTrajectory=value=>{
   if(!['low','high'].includes(value))return;
   if($('weaponType').value!=='m777'){updateMapTrajectory();return;}
@@ -422,8 +561,8 @@ window.mapAimChangeTrajectory=value=>{
   source.value=value;
   source.dispatchEvent(new Event('input',{bubbles:true}));
   source.dispatchEvent(new Event('change',{bubbles:true}));
-  updateMapTrajectory();
-  if(xy('gun')&&xy('target'))solve();
+  updateMapTrajectory();syncMapWeapons();render();
+  solve();
 };
 window.mapAimSetHeight=(which,z)=>{if(!['gun','target'].includes(which))return;terrainFlags()[which]=false;const field=$(which==='gun'?'artZ':'tgtZ');field.value=z;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));terrainUi();opPersist();solve();};
 window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();syncAutoTerrain();render();stats();onlineLabel();};
@@ -448,7 +587,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();window.mapAimZoom(e.deltaY<0?2:.5);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){
