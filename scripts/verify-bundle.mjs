@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 
-const root=new URL('../dist/',import.meta.url);
+const root=path.resolve('dist');
 const files=[];
 function visit(dir) {
   for(const entry of fs.readdirSync(dir,{withFileTypes:true})) {

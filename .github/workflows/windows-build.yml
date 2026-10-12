@@ -27,6 +27,11 @@ jobs:
         run: npm install
       - name: Verify bundled calculation core and project
         run: npm run check
+      - name: Verify interactive map is included in build
+        shell: pwsh
+        run: |
+          npm run build:web
+          node scripts/verify-bundle.mjs
       - name: Build NSIS installer
         run: npm run build
       - name: Upload Windows installer
