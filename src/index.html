@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.7.4 — Desktop</title>
+<title>Arma Reforger Fire Control 3.7.5 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -692,6 +692,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                         <button type="button" class="op-btn" onclick="document.getElementById('mapHeightFile').click()">▣ Загрузить файл высот JSON</button>
                         <input type="file" id="mapHeightFile" accept=".json,application/json" hidden onchange="mapAimImportTerrain(this)">
                       </div>
+                      <p class="map-aim-muted">Если высоты не загружаются, <a href="https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/everon_height.json" target="_blank" rel="noopener noreferrer">скачайте JSON карты высот</a> через браузер и импортируйте его кнопкой выше. В Windows запрос выполняется через нативный HTTPS-клиент Tauri без ограничений CORS.</p>
                       <p class="map-aim-muted">Рельеф Эверона: источник <a href="https://github.com/GeNeFRAG/ArmaReforger" target="_blank" rel="noopener noreferrer">GeNeFRAG</a>, сетка приблизительно 10 × 10 м. Авто Z — высота <strong>поверхности</strong>, не высота крыши или орудия над землёй. Снимите галочку «Авто Z», чтобы задать высоту вручную. При недоступности рельефа текущие значения Z сохраняются. Для собственных изображений авто Z отключается. Снаряд, заряд и ветер используются из вкладки «По координатам».</p>
                       <button type="button" class="op-btn" onclick="uxGoTab('coords')">⚙ Снаряд, ветер и ручные поправки →</button>
                       <div class="map-aim-kv"><span>Орудие · GRID</span><strong id="mapGunGrid">—</strong></div>

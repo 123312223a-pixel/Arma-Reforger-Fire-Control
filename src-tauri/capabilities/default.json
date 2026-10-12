@@ -7,6 +7,14 @@
   ],
   "permissions": [
     "core:default",
-    "window-state:default"
+    "window-state:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/everon_height.json"
+        }
+      ]
+    }
   ]
 }

@@ -1,5 +1,6 @@
 import { formatMapTileUrl } from './map-url.mjs';
 import { EVERON_HEIGHT_URL, packHeightGrid, getTerrainHeight } from './heightmap.mjs';
+import { fetch as nativeHttpFetch } from '@tauri-apps/plugin-http';
 /* v3.7.2 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
 const S=12800,B=800,N='http://www.w3.org/2000/svg', $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -178,14 +179,34 @@ async function terrainFetch(force=false){
   try{
     const controller=new AbortController();
     timer=setTimeout(()=>controller.abort(),60000);
-    const response=await fetch(EVERON_HEIGHT_URL,{cache:'force-cache',signal:controller.signal});
-    if(!response.ok)throw Error('HTTP '+response.status);
+    // This native plugin bypasses WebView2 CORS. Scope is restricted to Everon height JSON.
+    let response,transport='браузерный HTTPS',nativeError='';
+    if(window.__TAURI_INTERNALS__?.invoke){
+      try{
+        response=await nativeHttpFetch(EVERON_HEIGHT_URL,{
+          method:'GET',connectTimeout:15000,signal:controller.signal
+        });
+        transport='нативный HTTPS (без CORS)';
+      }catch(error){
+        nativeError=String(error?.message||error);
+        console.warn('Нативная загрузка рельефа не удалась, пробуем WebView2:',nativeError);
+      }
+    }
+    if(!response){
+      try{
+        response=await fetch(EVERON_HEIGHT_URL,{cache:'force-cache',signal:controller.signal});
+      }catch(error){
+        if(nativeError)throw Error('Нативный HTTPS: '+nativeError+'; браузер: '+String(error?.message||error));
+        throw error;
+      }
+    }
+    if(!response.ok)throw Error('HTTP '+response.status+' ('+transport+')');
     const length=Number(response.headers.get('content-length')||0);
     if(length>90000000)throw Error('Файл больше 90 МБ');
     const raw=await response.json();
     const grid=packHeightGrid(raw);
     if(token!==terrainToken)return;
-    setTerrain(grid,'с сервера');void terrainCacheWrite(grid);
+    setTerrain(grid,'с сервера · '+transport);void terrainCacheWrite(grid);
   }catch(error){
     if(token!==terrainToken)return;
     terrainStatus='error';terrainError=error.name==='AbortError'?'превышено время ожидания':String(error.message||error);

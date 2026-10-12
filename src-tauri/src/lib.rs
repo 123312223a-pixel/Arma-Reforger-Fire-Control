@@ -82,7 +82,8 @@ fn updater_available() -> bool {
 
 pub fn run() {
     let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_window_state::Builder::default().build());
+        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_http::init());
     // Unsigned development builds intentionally have no update permissions.
     // Official update-capable builds use --features signed-updates and a
     // generated Tauri config overlay with trusted endpoints and public key.

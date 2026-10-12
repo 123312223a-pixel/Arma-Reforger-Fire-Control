@@ -35,6 +35,18 @@ assert.ok(mapJs.includes('window.mapAimInit='),'Missing map initialization');
 console.log('OK: map is linked as a Vite module');
 assert.ok(html.includes('mapAutoGunZ')&&html.includes('mapAutoTargetZ'),'Missing automatic terrain-height controls');
 console.log('OK: terrain-height controls and independent manual overrides present');
+assert.ok(fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8')
+  .includes("import { fetch as nativeHttpFetch } from '@tauri-apps/plugin-http'"),
+  'Native HTTPS transport must be present in bundled map');
+assert.ok(cargo.includes('tauri-plugin-http = "2"') &&
+  fs.readFileSync(new URL('../src-tauri/src/lib.rs',import.meta.url),'utf8')
+    .includes('.plugin(tauri_plugin_http::init())'),
+  'Rust HTTP plugin setup missing');
+const nativeHttpScope=cap.permissions.find(x=>typeof x==='object' && x.identifier==='http:default');
+assert.deepEqual(nativeHttpScope?.allow,[{url:'https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/everon_height.json'}],
+  'HTTP scope must allow only the Everon height JSON URL');
+assert.equal(pkg.dependencies['@tauri-apps/plugin-http'],'^2.0.0');
+console.log('OK: restricted native HTTPS transport for Everon height JSON');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
 
