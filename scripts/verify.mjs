@@ -66,6 +66,17 @@ for(const method of ['mapAimSettingChanged','syncMapWeapons','drawRangeCircles',
 }
 assert.ok(html.includes('window.mapAimGetRangeEnvelope'),'Original ballistics table range metadata not exposed');
 console.log('OK: unified map equipment controls, pinned solutions and range ring support');
+for(const id of ['mapWorldSelect','mapCatalogStatus','mapWorldInfo']){
+ assert.ok(html.includes('id="'+id+'"'),'Missing multi-world UI '+id);
+}
+const mapScript=fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8');
+assert.ok(mapScript.includes('mapAimChangeMap')&&mapScript.includes('discoverMaps'),
+ 'Multi-world map controls missing');
+assert.ok(mapScript.includes('drawMinimumRange')&&mapScript.includes('insideMinimum'),
+ 'Table-based red minimum range zone missing');
+assert.ok(mapScript.includes("st().mapSlug!=='everon'"),
+ 'Never allow Everon height data to affect a different world');
+console.log('OK: multi-world map controls and red minimum range zone');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
 

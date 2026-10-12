@@ -43,6 +43,10 @@ jobs:
         run: npm install
       - name: Test Everon terrain height lookup
         run: npm run test:heightmap
+      - name: Test Reforger maps catalogue and minimum-range display
+        run: |
+          npm run test:map-catalog
+          npm run test:map-range
       - name: Verify core and configured channel
         run: npm run release:verify
       - name: Verify Windows frontend includes interactive map

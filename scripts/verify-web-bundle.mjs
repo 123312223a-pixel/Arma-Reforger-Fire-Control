@@ -19,4 +19,8 @@ assert.ok(js.includes('mapAimSettingChanged'),'Map weapon settings controller mi
 assert.ok(js.includes('mapQuickElevation') && js.includes('mapRangeStatus'),
  'Map pinned status/range display missing in bundle');
 assert.ok(js.includes('mapAimToggleRings'),'Range ring visibility control missing in bundle');
+assert.ok(js.includes('mapAimChangeMap'),'Map selector missing from Vite bundle');
+assert.ok(js.includes('mapWorldSelect')&&js.includes('mapCatalogue'),'Multi-world metadata missing');
+assert.ok(js.includes('drawMinimumRange')||js.includes('Красная заливка'),
+ 'Minimum firing range zone missing from Vite bundle');
 console.log('OK: interactive map code is present in Vite bundle');

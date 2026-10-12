@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {mapRadius,insideMinimum} from '../src/map-range.mjs';
+assert.equal(mapRadius(800,12800),50);
+assert.ok(Math.abs(mapRadius(800,4095)-156.2881562881563)<.001);
+assert.equal(mapRadius(0,12800),0);
+assert.equal(mapRadius(-1,12800),null);
+assert.equal(mapRadius(500,0),null);
+assert.equal(insideMinimum(399,400),true);
+assert.equal(insideMinimum(400,400),false);
+assert.equal(insideMinimum(401,400),false);
+assert.equal(insideMinimum(0,0),false);
+console.log('OK: minimum red disc and rings maintain game-metre scale across terrains.');

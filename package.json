@@ -1,7 +1,7 @@
 {
   "name": "arma-reforger-fire-control",
   "private": true,
-  "version": "3.7.7",
+  "version": "3.8.0",
   "type": "module",
   "description": "Arma Reforger Fire Control Desktop with optional signed auto-update support (Tauri 2)",
   "scripts": {
@@ -17,7 +17,9 @@
     "release:verify": "node scripts/verify.mjs && node scripts/require-updater.mjs",
     "version:set": "node scripts/set-version.mjs",
     "check:bundle": "vite build && node scripts/verify-web-bundle.mjs",
-    "test:heightmap": "node scripts/test-heightmap.mjs"
+    "test:heightmap": "node scripts/test-heightmap.mjs",
+    "test:map-catalog": "node scripts/test-map-catalog.mjs",
+    "test:map-range": "node scripts/test-map-range.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

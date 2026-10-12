@@ -1,4 +1,5 @@
 import { formatMapTileUrl } from './map-url.mjs';
+import { mapRadius,insideMinimum } from './map-range.mjs';
 import {FALLBACK_REFORGER_MAPS,normalizeMapListing,validateMapDimensions} from './map-catalog.mjs';
 import { EVERON_HEIGHT_URL, packHeightGrid, getTerrainHeight, sampleElevationProfile } from './heightmap.mjs';
 import { fetch as nativeHttpFetch } from '@tauri-apps/plugin-http';
@@ -345,6 +346,7 @@ function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,
  svg.replaceChildren(el('rect',{x:0,y:0,width:B,height:B,fill:'#1b3129'}));
  onlineTiles(svg,a,v);
  if(a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:a.image,preserveAspectRatio:'none'}));
+ drawMinimumRange(svg);
  const tick=z>=8?250:z>=4?500:1000;
  for(let n=0;n<=S;n+=tick){const px=toPixel({x:n,y:0}),py=toPixel({x:0,y:n});if(!px||!py)continue;
  const major=n%1000===0,attrs={stroke:'#d8e9c1','stroke-opacity':major?.32:.13,'stroke-width':1/z};
@@ -526,11 +528,28 @@ function rangeUi(){
  if(gun&&target){
   const distance=Math.hypot(target.x-gun.x,target.y-gun.y);
   const valid=range.ranges.some(a=>distance>=a.min&&distance<=a.max);
-  statement+=' Цель '+(valid?'в табличном интервале.':'вне доступных интервалов.');
+  statement+=' '+(insideMinimum(distance,range.min)?'Цель в КРАСНОЙ ЗОНЕ: ближе минимальной табличной дальности.':('Цель '+(valid?'в табличном интервале.':'вне доступных интервалов.')));
  }
- statement+=' Круги показывают горизонтальную дальность, не гарантируют возможность выстрела.';
+ statement+=' Красная заливка — ближе минимальной табличной дальности. Линии и круги показывают горизонтальную дальность, не гарантируют решение.';
  label.textContent=statement;
 }
+
+function drawMinimumRange(svg) {
+ const gun=xy('gun');if(!gun||st().showRangeRings===false)return;
+ const rmin=tableRange().min;
+ if(!Number.isFinite(rmin)||rmin<=0)return;
+ const p=toPixel(gun),z=st().zoom,r=mapRadius(rmin,S,B);
+ if(!p||r===null)return;
+ // Solid red disc means ALL table charge options reject ranges below rmin.
+ // This is not a simulated physical blast or obstruction region.
+ svg.append(el('circle',{cx:p.x,cy:p.y,r,fill:'#ed3848','fill-opacity':.27,
+   stroke:'#ff7880','stroke-width':2.4/z,'pointer-events':'none'}));
+ svg.append(el('text',{x:p.x+10/z,y:p.y-r+18/z,
+   fill:'#fff0eb','font-size':12/z,'font-weight':'bold',
+   stroke:'#3a111b','stroke-width':3/z,'paint-order':'stroke','pointer-events':'none'},
+   'МИН '+Math.round(rmin).toLocaleString('ru-RU')+' м'));
+}
+
 function drawRangeCircles(svg){
  const gun=xy('gun');
  if(!gun||st().showRangeRings===false)return;
@@ -538,11 +557,11 @@ function drawRangeCircles(svg){
  if(!Number.isFinite(envelope.max)||envelope.max<=0)return;
  const pixel=toPixel(gun),zoom=st().zoom;
  if(!pixel)return;
- // World SVG is 800 units wide; the game world spans 12 800 metres.
+ // World SVG spans 800 units; game metres are normalized by the selected map size.
  // Rings reflect horizontal ranges of the ORIGINAL source tables.
  const scales=[.25,.5,.75,1];
  for(const fraction of scales){
-  const metres=Math.round(envelope.max*fraction),r=metres/S*B;
+  const metres=Math.round(envelope.max*fraction),r=mapRadius(metres,S,B);
   svg.append(el('circle',{cx:pixel.x,cy:pixel.y,r,
    stroke:fraction===1?'#f8d27a':'#9fd3a6',
    'stroke-width':(fraction===1?2.5:1.1)/zoom,
