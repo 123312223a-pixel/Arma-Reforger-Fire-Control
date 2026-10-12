@@ -33,6 +33,8 @@ assert.match(html,/<script\s+type="module"\s+src="\.\/map-mode\.js"><\/script>/,
   'Map code must be a Vite module or it will not be packaged into the Windows app');
 assert.ok(mapJs.includes('window.mapAimInit='),'Missing map initialization');
 console.log('OK: map is linked as a Vite module');
+assert.ok(html.includes('mapAutoGunZ')&&html.includes('mapAutoTargetZ'),'Missing automatic terrain-height controls');
+console.log('OK: terrain-height controls and independent manual overrides present');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
 

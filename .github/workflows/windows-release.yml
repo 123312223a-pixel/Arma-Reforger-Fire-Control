@@ -41,6 +41,8 @@ jobs:
           if ("${{ github.ref_name }}" -ne "v$v") { throw "Git tag must be v$v" }
       - name: Install npm dependencies
         run: npm install
+      - name: Test Everon terrain height lookup
+        run: npm run test:heightmap
       - name: Verify core and configured channel
         run: npm run release:verify
       - name: Verify Windows frontend includes interactive map

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.7.3 — Desktop</title>
+<title>Arma Reforger Fire Control 3.7.4 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -681,8 +681,18 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                     <div class="map-aim-details" style="margin-top:0">
                       <h3>Параметры для расчёта</h3>
                       <div class="form-group"><label for="mapWeaponType">Орудие</label><select id="mapWeaponType" onchange="mapAimChangeWeapon(this.value)"><option value="m777">M777</option><option value="m252">M252</option><option value="2b14">2Б14 «Поднос»</option></select></div>
-                      <div class="form-row"><div class="form-group"><label for="mapGunZ">Высота орудия, м</label><input type="number" id="mapGunZ" step="1" onchange="mapAimSetHeight('gun',this.value)"></div><div class="form-group"><label for="mapTargetZ">Высота цели, м</label><input type="number" id="mapTargetZ" step="1" onchange="mapAimSetHeight('target',this.value)"></div></div>
-                      <p class="map-aim-muted">Высоты вводятся вручную: обычное изображение карты не содержит достоверных данных о рельефе. Снаряд, заряд, ветер и траектория используются из вкладки «По координатам».</p>
+                      <div class="form-row"><div class="form-group"><label for="mapGunZ">Высота орудия, м</label><input type="number" id="mapGunZ" step="any" onchange="mapAimSetHeight('gun',this.value)"></div><div class="form-group"><label for="mapTargetZ">Высота цели, м</label><input type="number" id="mapTargetZ" step="any" onchange="mapAimSetHeight('target',this.value)"></div></div>
+                      <div class="form-row" style="margin:4px 0 12px">
+                        <label style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="mapAutoGunZ" checked onchange="mapAimToggleAutoHeight('gun',this.checked)" style="width:auto;flex:none"> Авто Z орудия</label>
+                        <label style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="mapAutoTargetZ" checked onchange="mapAimToggleAutoHeight('target',this.checked)" style="width:auto;flex:none"> Авто Z цели</label>
+                      </div>
+                      <div class="map-aim-status" id="mapHeightState" role="status">Высоты Эверона будут загружены отдельно от изображения карты.</div>
+                      <div class="map-aim-actions" style="margin:10px 0 12px">
+                        <button type="button" class="op-btn" onclick="mapAimLoadTerrain()">↻ Обновить высоты</button>
+                        <button type="button" class="op-btn" onclick="document.getElementById('mapHeightFile').click()">▣ Загрузить файл высот JSON</button>
+                        <input type="file" id="mapHeightFile" accept=".json,application/json" hidden onchange="mapAimImportTerrain(this)">
+                      </div>
+                      <p class="map-aim-muted">Рельеф Эверона: источник <a href="https://github.com/GeNeFRAG/ArmaReforger" target="_blank" rel="noopener noreferrer">GeNeFRAG</a>, сетка приблизительно 10 × 10 м. Авто Z — высота <strong>поверхности</strong>, не высота крыши или орудия над землёй. Снимите галочку «Авто Z», чтобы задать высоту вручную. При недоступности рельефа текущие значения Z сохраняются. Для собственных изображений авто Z отключается. Снаряд, заряд и ветер используются из вкладки «По координатам».</p>
                       <button type="button" class="op-btn" onclick="uxGoTab('coords')">⚙ Снаряд, ветер и ручные поправки →</button>
                       <div class="map-aim-kv"><span>Орудие · GRID</span><strong id="mapGunGrid">—</strong></div>
                       <div class="map-aim-kv"><span>Цель · GRID</span><strong id="mapTargetGrid">—</strong></div>
