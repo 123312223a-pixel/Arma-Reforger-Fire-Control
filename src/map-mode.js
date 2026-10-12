@@ -1,97 +1,183 @@
-/* 3.7.0 — режим наведения по карте. Баллистика не изменяется. */
+/* v3.7.1 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
-const SIZE=12800,BASE=800,NS='http://www.w3.org/2000/svg',SERVER='https://enfumap.com';
-const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const initial=()=>({tool:'gun',layer:'topo',zoom:1,cx:400,cy:400,image:'',refs:[{px:0,py:0,x:0,y:SIZE},{px:BASE,py:BASE,x:SIZE,y:0}]});
-let initialized=false,drag=null,mapData=null,mapStatus='loading';
-function state(){if(!opState.mapAim||typeof opState.mapAim!=='object')opState.mapAim=initial();const a=opState.mapAim;
- if(!Array.isArray(a.refs)||a.refs.length!==2)a.refs=initial().refs;
+const S=12800,B=800,N='http://www.w3.org/2000/svg', $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fresh=()=>({tool:'gun',layer:'topo',zoom:1,cx:400,cy:400,image:'',refs:[{px:0,py:0,x:0,y:S},{px:800,py:800,x:S,y:0}]});
+let ready=false,drag=null,onlineInfo=null,onlineState='loading',onlineRequest=0;
+let tileProbeToken=-1, tileProbe=null, tileWatchdog=null, offlineReason='';
+const mapEndpoint='https://enfumap.com';
+function onlineLabel(){
+ const label=$('mapAimTileState');if(!label)return;
+ const state=st();
+ if(state.image)label.textContent='Своя карта · сохранена локально';
+ else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
+ else if(onlineState==='ready')label.textContent='Карта подключена · Enfumap';
+ else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
+ else label.textContent='Онлайн-карта недоступна · включите GRID';
+}
+function finishTileProbe(){if(tileWatchdog!==null)clearTimeout(tileWatchdog);tileWatchdog=null;tileProbe=null;}
+function failOnline(reason){
+ finishTileProbe();onlineState='error';offlineReason=reason;
+ if(st().image){onlineLabel();render();return;}
+ st().layer='grid';const select=$('mapAimLayer');if(select)select.value='grid';
+ try{opPersist();}catch(error){console.warn('Сохранение слоя не удалось:',error);}
+ onlineLabel();render();
+ status(reason+' Переключено на GRID: отметки и расчёт продолжают работать.','mapAimInstruction');
+}
+function onlineTiles(svg,a,v){
+ if(a.image||a.layer==='grid'||!['tiles','ready'].includes(onlineState)||!onlineInfo?.tiles)return;
+ const tiles=onlineInfo.tiles;
+ const layer=a.layer==='topo'?(tiles.layers?.topo||tiles.url):tiles.layers?.[a.layer];
+ if(typeof layer!=='string'||!layer.includes('{z}')||!layer.includes('{x}')||!layer.includes('{y}')){
+  queueMicrotask(()=>failOnline('У выбранного слоя нет доступных тайлов.'));return;
+ }
+ let url;try{url=new URL(layer,mapEndpoint);}catch{queueMicrotask(()=>failOnline('Некорректный адрес тайлов.'));return;}
+ if(url.origin!==mapEndpoint){queueMicrotask(()=>failOnline('Адрес сервера карты не прошёл проверку.'));return;}
+ const native=a.layer==='topo'?tiles.maxNativeZoom:(tiles.satelliteMaxNativeZoom??tiles.maxNativeZoom);
+ const maxNative=Number.isInteger(native)?Math.min(7,native):5;
+ const z=clamp(Math.round(Math.log2(a.zoom))+2,0,maxNative),n=2**z,size=800/n;
+ const left=clamp(Math.floor(v.x/size),0,n-1),right=clamp(Math.floor((v.x+v.size)/size),0,n-1);
+ const top=clamp(Math.floor(v.y/size),0,n-1),bottom=clamp(Math.floor((v.y+v.size)/size),0,n-1);
+ let firstUrl='';
+ for(let row=top;row<=bottom;row++)for(let col=left;col<=right;col++){
+  const href=url.href.replaceAll('{z}',String(z)).replaceAll('{x}',String(col)).replaceAll('{y}',String(row));
+  if(!firstUrl)firstUrl=href;
+  svg.append(el('image',{x:col*size,y:row*size,width:size+.08,height:size+.08,href,preserveAspectRatio:'none','pointer-events':'none'}));
+ }
+ // Metadata can load successfully while WebView2 blocks actual image tiles.
+ // Probe a visible tile, not only the JSON API. Preserve the GRID overlay while loading.
+ if(firstUrl && onlineState==='tiles' && tileProbeToken!==onlineRequest){
+  const token=onlineRequest;tileProbeToken=token;finishTileProbe();
+  const probe=new Image();tileProbe=probe;
+  probe.onload=()=>{if(token!==onlineRequest)return;finishTileProbe();onlineState='ready';offlineReason='';onlineLabel();};
+  probe.onerror=()=>{if(token===onlineRequest)failOnline('Сервер ответил, но изображения карты не загружаются.');};
+  tileWatchdog=setTimeout(()=>{if(token===onlineRequest && onlineState!=='ready')failOnline('Тайлы не загрузились за 9 секунд.');},9000);
+  probe.src=firstUrl;
+ }
+}
+async function loadOnlineMap(force=false){
+ const a=st();
+ if(a.image){offlineReason='';onlineLabel();render();return;}
+ if(a.layer==='grid'&&!force){offlineReason='';onlineState='offline';onlineLabel();render();return;}
+ const token=++onlineRequest;tileProbeToken=-1;finishTileProbe();onlineInfo=null;
+ onlineState='loading';offlineReason='';onlineLabel();render();
+ try{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
+  let response;try{response=await fetch(mapEndpoint+'/api/v1/maps/everon',{cache:'no-cache',signal:controller.signal});}finally{clearTimeout(timer);}
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const json=await response.json();
+  if(json?.ok!==true||!json.data?.tiles||Number(json.data.worldSize)!==S)throw Error('Неверные данные карты');
+  if(token!==onlineRequest)return;
+  onlineInfo=json.data;onlineState='tiles';onlineLabel();render();
+ }catch(e){if(token!==onlineRequest)return;console.warn('Enfumap недоступен:',e.message);failOnline('Нет доступа к онлайн-карте ('+e.message+').');}
+}
+
+function st(){if(!opState.mapAim||typeof opState.mapAim!=='object')opState.mapAim=fresh();const a=opState.mapAim;
+ if(!Array.isArray(a.refs)||a.refs.length!==2)a.refs=fresh().refs;
  if(typeof a.image!=='string'||a.image.length>1800000||a.image&&!a.image.startsWith('data:image/jpeg;base64,'))a.image='';
  if(!['topo','satellite','fogless','grid'].includes(a.layer))a.layer='topo';
- a.zoom=clamp(Number(a.zoom)||1,1,16);a.cx=clamp(Number(a.cx)||400,0,800);a.cy=clamp(Number(a.cy)||400,0,800);
+ a.zoom=clamp(+a.zoom||1,1,16);a.cx=clamp(+a.cx||400,0,800);a.cy=clamp(+a.cy||400,0,800);
  return a;}
-const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=SIZE&&p.y>=0&&p.y<=SIZE;
-function refs(){const r=state().refs,p=r[0],q=r[1],dx=q.px-p.px,dy=q.py-p.py,sx=(q.x-p.x)/dx,sy=(q.y-p.y)/dy;
- if(!Number.isFinite(sx)||!Number.isFinite(sy)||Math.abs(dx)<15||Math.abs(dy)<15||sx<=0||sy>=0||Math.abs(q.x-p.x)<50||Math.abs(q.y-p.y)<50)return null;return{p,sx,sy};}
-function world(p){const r=refs();return r?{x:r.p.x+(p.x-r.p.px)*r.sx,y:r.p.y+(p.y-r.p.py)*r.sy}:null;}
-function pixel(p){const r=refs();return r?{x:r.p.px+(p.x-r.p.x)/r.sx,y:r.p.py+(p.y-r.p.y)/r.sy}:null;}
-function point(kind){const ids=kind==='gun'?['artX','artY']:['tgtX','tgtY'],x=Number($(ids[0]).value),y=Number($(ids[1]).value);return valid({x,y})?{x,y}:null;}
-const format=p=>p?Math.round(p.x).toString().padStart(5,'0')+' / '+Math.round(p.y).toString().padStart(5,'0'):'—';
-function element(name,attrs={},body){const e=document.createElementNS(NS,name);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,String(v));if(body!=null)e.textContent=body;return e;}
-function message(t,id='mapAimInstruction'){if($(id))$(id).textContent=t;}
-function frame(){const a=state(),size=BASE/a.zoom;a.cx=clamp(a.cx,size/2,BASE-size/2);a.cy=clamp(a.cy,size/2,BASE-size/2);return{x:a.cx-size/2,y:a.cy-size/2,size};}
-function label(){const a=state();$('mapAimTileState').textContent=a.image?'Своя карта · локально':a.layer==='grid'?'Сетка · офлайн':mapStatus==='ready'?'Enfumap · карта подключена':mapStatus==='loading'?'Загрузка тайлов…':'Нет связи с картой · GRID';}
-function tiles(svg,a,f){if(a.image||a.layer==='grid'||mapStatus!=='ready'||!mapData?.tiles)return;
- const t=mapData.tiles,pattern=a.layer==='topo'?(t.layers?.topo||t.url):t.layers?.[a.layer];if(typeof pattern!=='string'||!pattern.includes('{z}')||!pattern.includes('{x}')||!pattern.includes('{y}'))return;
- let u;try{u=new URL(pattern,SERVER);}catch{return;}if(u.origin!==SERVER)return;
- const limit=a.layer==='topo'?t.maxNativeZoom:(t.satelliteMaxNativeZoom??t.maxNativeZoom),zoom=clamp(Math.round(Math.log2(a.zoom))+2,0,Number.isInteger(limit)?Math.min(limit,7):5),n=2**zoom,size=BASE/n;
- const x1=clamp(Math.floor(f.x/size),0,n-1),x2=clamp(Math.floor((f.x+f.size)/size),0,n-1),y1=clamp(Math.floor(f.y/size),0,n-1),y2=clamp(Math.floor((f.y+f.size)/size),0,n-1);
- for(let y=y1;y<=y2;y++)for(let x=x1;x<=x2;x++)svg.append(element('image',{x:x*size,y:y*size,width:size+.06,height:size+.06,href:u.href.replaceAll('{z}',String(zoom)).replaceAll('{x}',String(x)).replaceAll('{y}',String(y)),preserveAspectRatio:'none','pointer-events':'none'}));
-}
-function render(){const svg=$('mapAimSvg');if(!svg)return;const a=state(),f=frame(),z=a.zoom;svg.setAttribute('viewBox',[f.x,f.y,f.size,f.size].join(' '));
- svg.replaceChildren(element('rect',{x:0,y:0,width:BASE,height:BASE,fill:'#1b3129'}));tiles(svg,a,f);
- if(a.image)svg.append(element('image',{x:0,y:0,width:BASE,height:BASE,href:a.image,preserveAspectRatio:'none','pointer-events':'none'}));
+const isxy=q=>q&&Number.isFinite(q.x)&&Number.isFinite(q.y)&&q.x>=0&&q.y>=0&&q.x<=S&&q.y<=S;
+function refs(){const [a,b]=st().refs,dp=b.px-a.px,dq=b.py-a.py,dx=b.x-a.x,dy=b.y-a.y;
+ if([dp,dq,dx,dy].some(v=>!Number.isFinite(v))||Math.abs(dp)<15||Math.abs(dq)<15||Math.abs(dx)<50||Math.abs(dy)<50||dx/dp<=0||dy/dq>=0)return null;
+ return {a,sx:dx/dp,sy:dy/dq};}
+function toWorld(p){const r=refs();return r?{x:r.a.x+(p.x-r.a.px)*r.sx,y:r.a.y+(p.y-r.a.py)*r.sy}:null;}
+function toPixel(p){const r=refs();return r?{x:r.a.px+(p.x-r.a.x)/r.sx,y:r.a.py+(p.y-r.a.y)/r.sy}:null;}
+function el(tag,atts={},text){const n=document.createElementNS(N,tag);Object.entries(atts).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!==undefined)n.textContent=text;return n;}
+function xy(kind){const ids=kind==='gun'?['artX','artY']:['tgtX','tgtY'];const x=Number($(ids[0]).value),y=Number($(ids[1]).value);return isxy({x,y})?{x,y}:null;}
+const fmt=q=>q?`${Math.round(q.x).toString().padStart(5,'0')} / ${Math.round(q.y).toString().padStart(5,'0')}`:'—';
+function status(message,id='mapAimInstruction'){const x=$(id);if(x)x.textContent=message;}
+function viewport(){const a=st(),size=B/a.zoom;a.cx=clamp(a.cx,size/2,B-size/2);a.cy=clamp(a.cy,size/2,B-size/2);return {x:a.cx-size/2,y:a.cy-size/2,size};}
+function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,v=viewport();svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.size} ${v.size}`);
+ svg.replaceChildren(el('rect',{x:0,y:0,width:B,height:B,fill:'#1b3129'}));
+ onlineTiles(svg,a,v);
+ if(a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:a.image,preserveAspectRatio:'none'}));
  const tick=z>=8?250:z>=4?500:1000;
- for(let n=0;n<=SIZE;n+=tick){const px=pixel({x:n,y:0}),py=pixel({x:0,y:n});if(!px||!py)continue;
- const major=n%1000===0,style={stroke:'#d8e9c1','stroke-opacity':major?.32:.13,'stroke-width':1/z};
- svg.append(element('line',{x1:px.x,y1:0,x2:px.x,y2:BASE,...style}),element('line',{x1:0,y1:py.y,x2:BASE,y2:py.y,...style}));
- if(major){if(px.x>=f.x&&px.x<=f.x+f.size)svg.append(element('text',{x:px.x+5/z,y:f.y+16/z,fill:'#e9f2d5','font-size':11/z,'paint-order':'stroke',stroke:'#182720','stroke-width':2/z},String(n)));
- if(py.y>=f.y&&py.y<=f.y+f.size)svg.append(element('text',{x:f.x+5/z,y:py.y-4/z,fill:'#e9f2d5','font-size':11/z,'paint-order':'stroke',stroke:'#182720','stroke-width':2/z},String(n)));}}
- svg.append(element('rect',{x:0,y:0,width:BASE,height:BASE,fill:'none',stroke:'#e1f1ce','stroke-opacity':.5,'stroke-width':2/z}));
- const g=point('gun'),t=point('target'),p=g&&pixel(g),q=t&&pixel(t);
- if(p&&q)svg.append(element('line',{x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:'#70c7f7','stroke-width':2.6/z,'stroke-dasharray':(7/z)+' '+(5/z)}));
- for(const[name,v,color]of[['ОРУДИЕ',p,'#96e7a4'],['ЦЕЛЬ',q,'#ff957e']]){if(!v)continue;
- svg.append(element('circle',{cx:v.x,cy:v.y,r:11/z,fill:color,stroke:'#10251b','stroke-width':2/z,'pointer-events':'none'}));
- svg.append(element('circle',{cx:v.x,cy:v.y,r:17/z,fill:'none',stroke:color,'stroke-width':2/z,'pointer-events':'none'}));
- svg.append(element('text',{x:v.x+20/z,y:v.y-8/z,fill:color,'font-size':16/z,'font-weight':'bold',stroke:'#0b150e','stroke-width':3/z,'paint-order':'stroke','pointer-events':'none'},name));}
- svg.append(element('text',{x:f.x+f.size-12/z,y:f.y+35/z,fill:'#eff8e2','font-size':13/z,'text-anchor':'end','paint-order':'stroke',stroke:'#132017','stroke-width':3/z},'СЕВЕР ↑'));
+ for(let n=0;n<=S;n+=tick){const px=toPixel({x:n,y:0}),py=toPixel({x:0,y:n});if(!px||!py)continue;
+ const major=n%1000===0,attrs={stroke:'#d8e9c1','stroke-opacity':major?.32:.13,'stroke-width':1/z};
+ svg.append(el('line',{x1:px.x,y1:0,x2:px.x,y2:800,...attrs}),el('line',{x1:0,y1:py.y,x2:800,y2:py.y,...attrs}));
+ if(major){if(px.x>=v.x&&px.x<=v.x+v.size)svg.append(el('text',{x:px.x+5/z,y:v.y+16/z,fill:'#e9f2d5','font-size':11/z,'paint-order':'stroke',stroke:'#182720','stroke-width':2.5/z},String(n)));
+ if(py.y>=v.y&&py.y<=v.y+v.size)svg.append(el('text',{x:v.x+5/z,y:py.y-4/z,fill:'#e9f2d5','font-size':11/z,'paint-order':'stroke',stroke:'#182720','stroke-width':2.5/z},String(n)));}}
+ svg.append(el('rect',{x:0,y:0,width:B,height:B,fill:'none',stroke:'#e1f1ce','stroke-opacity':.5,'stroke-width':2/z}));
+ const gun=xy('gun'),target=xy('target'),p=gun&&toPixel(gun),q=target&&toPixel(target);
+ if(p&&q)svg.append(el('line',{x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:'#70c7f7','stroke-width':2.6/z,'stroke-dasharray':`${7/z} ${5/z}`}));
+ for(const [name,point,color] of [['ОРУДИЕ',p,'#96e7a4'],['ЦЕЛЬ',q,'#ff957e']]){if(!point)continue;
+ svg.append(el('circle',{cx:point.x,cy:point.y,r:11/z,fill:color,stroke:'#10251b','stroke-width':2/z,'pointer-events':'none'}));
+ svg.append(el('circle',{cx:point.x,cy:point.y,r:17/z,fill:'none',stroke:color,'stroke-width':2/z,'pointer-events':'none'}));
+ svg.append(el('text',{x:point.x+20/z,y:point.y-8/z,fill:color,'font-size':16/z,'font-weight':'bold',stroke:'#0b150e','stroke-width':3/z,'paint-order':'stroke','pointer-events':'none'},name));}
+ svg.append(el('text',{x:v.x+v.size-12/z,y:v.y+35/z,fill:'#eff8e2','font-size':13/z,'text-anchor':'end','paint-order':'stroke',stroke:'#132017','stroke-width':3/z},'СЕВЕР ↑'));
  $('mapZoomLabel').textContent=z+'×';svg.classList.toggle('is-pan',a.tool==='pan');
- for(const[k,id]of[['gun','mapModeGun'],['target','mapModeTarget'],['pan','mapModePan']]){$(id).classList.toggle('is-selected',a.tool===k);$(id).setAttribute('aria-pressed',String(a.tool===k));}}
-function stats(){const g=point('gun'),t=point('target');$('mapGunGrid').textContent=format(g);$('mapTargetGrid').textContent=format(t);
+ for(const [tool,id] of [['gun','mapModeGun'],['target','mapModeTarget'],['pan','mapModePan']]){$(id).classList.toggle('is-selected',a.tool===tool);$(id).setAttribute('aria-pressed',String(a.tool===tool));}
+}
+function stats(){const gun=xy('gun'),target=xy('target');$('mapGunGrid').textContent=fmt(gun);$('mapTargetGrid').textContent=fmt(target);
  $('mapWeaponType').value=$('weaponType').value;$('mapGunZ').value=$('artZ').value;$('mapTargetZ').value=$('tgtZ').value;
- if(!g||!t){for(const id of ['mapDistance','mapBearingDegrees','mapBearingMils'])$(id).textContent='—';return;}
- const dx=t.x-g.x,dy=t.y-g.y,az=(Math.atan2(dx,dy)*180/Math.PI+360)%360,weapon=$('weaponType').value;
- $('mapDistance').textContent=Math.round(Math.hypot(dx,dy))+' м';$('mapBearingDegrees').textContent=az.toFixed(2)+'°';$('mapBearingMils').textContent=degreesToMils(az,weapon)+' / '+milsPerCircle(weapon);}
-function solve(){const g=point('gun'),t=point('target');stats();if(!g||!t||Math.hypot(t.x-g.x,t.y-g.y)<1){message('Выберите разные точки орудия и цели.','mapAimStatus');return;}
- window.calculateCoords();const ok=opValid('coords');$('mapResultElev').textContent=ok?$('cResElev').textContent.trim()+' тыс.':'—';$('mapResultCharge').textContent=ok?$('cResCharge').textContent.trim():'—';$('mapResultTof').textContent=ok?$('cResTof').textContent.trim()+' с':'—';
- message(ok?'✓ Решение рассчитано по проверенной таблице.':'Для этой дальности и выбранного орудия табличное решение не найдено.','mapAimStatus');}
-function svgPoint(e){const svg=$('mapAimSvg'),m=svg.getScreenCTM();if(!m)return null;const v=svg.createSVGPoint();v.x=e.clientX;v.y=e.clientY;const p=v.matrixTransform(m.inverse());return{x:p.x,y:p.y};}
-function clickPosition(tool,p){const q=world(p);if(!valid(q)){message('Точка вне игровой карты. Проверьте привязку.');return;}const ids=tool==='gun'?['artX','artY']:['tgtX','tgtY'];
- ids.forEach((id,i)=>{const e=$(id);e.value=String(Math.round(i?q.y:q.x)).padStart(5,'0');e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));});
- render();solve();if(tool==='gun')window.mapAimSetTool('target');message(tool==='gun'?'Орудие отмечено. Теперь кликните по цели.':'Цель отмечена. Решение рассчитано автоматически.');}
-function calibrate(tool,p){if(!state().image){message('Калибровка нужна только собственной картинке.','mapCalibrationStatus');return;}
- const i=tool==='ref1'?0:1,x=Number($('mapRef'+(i+1)+'X').value),y=Number($('mapRef'+(i+1)+'Y').value),a=state();if(!valid({x,y})){message('Введите корректные GRID-координаты.','mapCalibrationStatus');return;}
- const old=a.refs[i];a.refs[i]={px:p.x,py:p.y,x,y};if(!refs()){a.refs[i]=old;message('Нужны две точки с разными координатами, севером вверх.','mapCalibrationStatus');return;}
- opPersist();render();stats();message('Точка '+(i+1)+' откалибрована.','mapCalibrationStatus');window.mapAimSetTool(i===0?'ref2':'gun');}
-function pointerDown(e){if(e.button!==0&&e.button!==1)return;const a=state();drag={x:e.clientX,y:e.clientY,cx:a.cx,cy:a.cy,pan:e.button===1||a.tool==='pan',moved:false};$('mapAimSvg').setPointerCapture?.(e.pointerId);e.preventDefault();}
-function pointerMove(e){const p=svgPoint(e);if(p){const q=world(p);$('mapPointerCoords').textContent=valid(q)?'GRID '+format(q):'Вне карты';}
+ if(!gun||!target){for(const id of ['mapDistance','mapBearingDegrees','mapBearingMils'])$(id).textContent='—';return;}
+ const dx=target.x-gun.x,dy=target.y-gun.y,deg=((Math.atan2(dx,dy)*180/Math.PI)+360)%360,weapon=$('weaponType').value;
+ $('mapDistance').textContent=Math.round(Math.hypot(dx,dy))+' м';$('mapBearingDegrees').textContent=deg.toFixed(2)+'°';$('mapBearingMils').textContent=degreesToMils(deg,weapon)+' / '+milsPerCircle(weapon);
+}
+function solve(){const a=xy('gun'),b=xy('target');stats();if(!a||!b||Math.hypot(b.x-a.x,b.y-a.y)<1){status('Выберите две разные позиции на карте.','mapAimStatus');return;}
+ window.calculateCoords();const valid=opValid('coords');$('mapResultElev').textContent=valid?$('cResElev').textContent.trim()+' тыс.':'—';
+ $('mapResultCharge').textContent=valid?$('cResCharge').textContent.trim():'—';$('mapResultTof').textContent=valid?$('cResTof').textContent.trim()+' с':'—';
+ status(valid?'✓ Решение рассчитано по проверенной таблице.':'Для выбранного расстояния и орудия табличное решение не найдено.','mapAimStatus');
+}
+function pointAt(e){const svg=$('mapAimSvg'),ctm=svg.getScreenCTM();if(!ctm)return null;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const r=point.matrixTransform(ctm.inverse());return {x:r.x,y:r.y};}
+function calibrate(tool,p){if(!st().image){status('Для онлайн-слоя калибровка не требуется. Загрузите свою карту.','mapCalibrationStatus');return;}const i=tool==='ref1'?0:1,x=Number($(`mapRef${i+1}X`).value),y=Number($(`mapRef${i+1}Y`).value),a=st();
+ if(!isxy({x,y})){status('Укажите координаты GRID от 0 до 12800.','mapCalibrationStatus');return;}
+ const prev=a.refs[i];a.refs[i]={px:p.x,py:p.y,x,y};
+ if(!refs()){a.refs[i]=prev;status('Точки не подошли. Нужны разные X/Y, север должен быть вверху.','mapCalibrationStatus');return;}
+ opPersist();render();stats();status(`Точка ${i+1} привязана. Сетка обновлена.`,'mapCalibrationStatus');window.mapAimSetTool(i===0?'ref2':'gun');
+}
+function place(tool,p){const xyValue=toWorld(p);if(!isxy(xyValue)){status('Точка вне игровых координат. Проверьте калибровку.');return;}
+ const ids=tool==='gun'?['artX','artY']:['tgtX','tgtY'];ids.forEach((id,index)=>{const control=$(id);control.value=Math.round(index?xyValue.y:xyValue.x).toString().padStart(5,'0');control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));});
+ render();solve();if(tool==='gun')window.mapAimSetTool('target');status(tool==='gun'?'Орудие отмечено. Кликните по цели.':'Цель отмечена. Решение рассчитано автоматически, можно переместить любую метку.');
+}
+function down(e){if(![0,1].includes(e.button))return;const p=pointAt(e),a=st();if(!p)return;
+ drag={x:e.clientX,y:e.clientY,cx:a.cx,cy:a.cy,pan:e.button===1||a.tool==='pan',moved:false};$('mapAimSvg').setPointerCapture?.(e.pointerId);if(drag.pan)$('mapAimSvg').classList.add('is-moving');e.preventDefault();}
+function move(e){const p=pointAt(e);if(p){const r=toWorld(p);$('mapPointerCoords').textContent=isxy(r)?'GRID '+fmt(r):'Вне карты';}
  if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>5)drag.moved=true;
- if(drag.pan&&drag.moved){const a=state(),b=$('mapAimSvg').getBoundingClientRect(),size=BASE/a.zoom;a.cx=clamp(drag.cx-dx/b.width*size,size/2,BASE-size/2);a.cy=clamp(drag.cy-dy/b.height*size,size/2,BASE-size/2);render();}}
-function pointerUp(e){if(!drag)return;const d=drag;drag=null;if(d.pan){if(d.moved)opPersist();return;}if(d.moved)return;const p=svgPoint(e);if(!p||p.x<0||p.x>BASE||p.y<0||p.y>BASE)return;
- const tool=state().tool;if(tool==='ref1'||tool==='ref2')calibrate(tool,p);else if(tool==='gun'||tool==='target')clickPosition(tool,p);}
-window.mapAimSetTool=tool=>{if(!['gun','target','pan','ref1','ref2'].includes(tool))return;if(tool.startsWith('ref')&&!state().image){message('Сначала загрузите изображение карты.');return;}
- state().tool=tool;opPersist();render();message(({gun:'Кликните на позицию орудия.',target:'Кликните на цель.',pan:'Перетащите карту мышью.',ref1:'Отметьте первую контрольную точку.',ref2:'Отметьте вторую контрольную точку.'})[tool]);};
-window.mapAimZoom=f=>{state().zoom=clamp(Math.round(state().zoom*f*100)/100,1,16);render();opPersist();};
-window.mapAimResetView=()=>{Object.assign(state(),{zoom:1,cx:400,cy:400});render();opPersist();};
-window.mapAimChangeWeapon=t=>{if(!['m777','m252','2b14'].includes(t))return;$('weaponType').value=t;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));render();solve();};
-window.mapAimSetHeight=(kind,z)=>{const e=$(kind==='gun'?'artZ':'tgtZ');e.value=z;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));solve();};
-window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{state();render();stats();label();};
-window.mapAimSelectLayer=layer=>{if(!['topo','satellite','fogless','grid'].includes(layer))return;state().layer=layer;opPersist();render();label();};
-window.mapAimSaveTarget=()=>{if(!point('target'))return message('Сначала поставьте цель.');solve();if(typeof window.tacSaveCurrentTarget==='function')window.tacSaveCurrentTarget();};
-window.mapAimSaveWeapon=()=>{if(!point('gun'))return message('Сначала поставьте орудие.');solve();if(typeof window.tacSaveCurrentWeapon==='function')window.tacSaveCurrentWeapon();};
-window.mapAimClearImage=()=>{const a=state();a.image='';a.refs=initial().refs;$('mapAimImage').value='';opPersist();render();stats();label();};
-window.mapAimClearCalibration=()=>{state().refs=initial().refs;for(let i=0;i<2;i++){$('mapRef'+(i+1)+'X').value=state().refs[i].x;$('mapRef'+(i+1)+'Y').value=state().refs[i].y;}opPersist();render();stats();message('Стандартная привязка восстановлена.','mapCalibrationStatus');};
-window.mapAimLoadImage=async input=>{const file=input.files?.[0];if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>20000000){message('Нужен JPG, PNG или WebP до 20 МБ.');input.value='';return;}
- const url=URL.createObjectURL(file);try{const pic=new Image();await new Promise((res,rej)=>{pic.onload=res;pic.onerror=()=>rej(Error('Изображение повреждено'));pic.src=url;});
- const canvas=document.createElement('canvas');canvas.width=1600;canvas.height=1600;canvas.getContext('2d').drawImage(pic,0,0,1600,1600);let data='';
- for(const q of [.82,.7,.55,.4]){data=canvas.toDataURL('image/jpeg',q);if(data.length<1200000)break;}if(data.length>=1200000)throw Error('Изображение слишком велико');
- const a=state();a.image=data;a.refs=initial().refs;for(let i=0;i<2;i++){$('mapRef'+(i+1)+'X').value=a.refs[i].x;$('mapRef'+(i+1)+'Y').value=a.refs[i].y;}opPersist();render();stats();label();message('Карта загружена. При необходимости откалибруйте её по двум точкам.');
- }catch(e){message('Ошибка: '+e.message);}finally{URL.revokeObjectURL(url);input.value='';}};
-async function loadTiles(){mapStatus='loading';label();try{const c=new AbortController(),timer=setTimeout(()=>c.abort(),12000);let r;try{r=await fetch(SERVER+'/api/v1/maps/everon',{signal:c.signal,cache:'force-cache'});}finally{clearTimeout(timer);}if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(!j?.data?.tiles||Number(j.data.worldSize)!==SIZE)throw Error('Метаданные карты несовместимы');mapData=j.data;mapStatus='ready';}
- catch(e){mapStatus='error';console.info('Онлайн-карта недоступна: '+e.message);}label();render();}
-window.mapAimInit=()=>{if(initialized)return;const svg=$('mapAimSvg');if(!svg)return;initialized=true;
- svg.addEventListener('pointerdown',pointerDown);svg.addEventListener('pointermove',pointerMove);svg.addEventListener('pointerup',pointerUp);svg.addEventListener('pointercancel',()=>{drag=null;});svg.addEventListener('contextmenu',e=>e.preventDefault());
+ if(drag.pan&&drag.moved){const a=st(),box=$('mapAimSvg').getBoundingClientRect(),size=B/a.zoom;a.cx=clamp(drag.cx-dx/box.width*size,size/2,B-size/2);a.cy=clamp(drag.cy-dy/box.height*size,size/2,B-size/2);render();}}
+function up(e){if(!drag)return;const had=drag;drag=null;$('mapAimSvg').classList.remove('is-moving');if(had.pan){if(had.moved)opPersist();return;}if(had.moved)return;
+ const p=pointAt(e);if(!p||p.x<0||p.y<0||p.x>B||p.y>B)return;const tool=st().tool;if(tool==='ref1'||tool==='ref2')calibrate(tool,p);else if(tool==='gun'||tool==='target')place(tool,p);
+}
+window.mapAimSetTool=tool=>{if(!['gun','target','pan','ref1','ref2'].includes(tool))return; if((tool==='ref1'||tool==='ref2')&&!st().image){status('Сначала загрузите свою карту, для онлайн-карты привязка уже известна.');return;}st().tool=tool;opPersist();render();
+ status(({gun:'Кликните по месту расположения орудия.',target:'Кликните по месту расположения цели.',pan:'Зажмите левую кнопку и сдвигайте карту.',ref1:'Отметьте на изображении первую известную точку.',ref2:'Отметьте на изображении вторую известную точку.'})[tool]);
+ if(tool==='ref1'||tool==='ref2')$('mapAimSvg')?.scrollIntoView({behavior:'instant',block:'center'});
+};
+window.mapAimZoom=factor=>{const a=st();a.zoom=clamp(Math.round(a.zoom*factor*100)/100,1,16);render();opPersist();};
+window.mapAimResetView=()=>{const a=st();a.zoom=1;a.cx=400;a.cy=400;opPersist();render();};
+window.mapAimChangeWeapon=type=>{if(!['m777','m252','2b14'].includes(type))return;$('weaponType').value=type;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));render();solve();};
+window.mapAimSetHeight=(which,z)=>{const el=$(which==='gun'?'artZ':'tgtZ');el.value=z;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));solve();};
+window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();render();stats();onlineLabel();};
+window.mapAimGoOffline=()=>{++onlineRequest;finishTileProbe();offlineReason='';onlineState='offline';st().layer='grid';$('mapAimLayer').value='grid';opPersist();render();onlineLabel();status('GRID-сетка включена. Можно работать без интернета.','mapAimInstruction');};
+window.mapAimRetryOnline=()=>{if(st().image){status('Сначала удалите загруженное изображение карты.','mapAimInstruction');return;}if(st().layer==='grid'){st().layer='topo';$('mapAimLayer').value='topo';opPersist();}loadOnlineMap(true);};
+window.mapAimSelectLayer=layer=>{if(!['topo','satellite','fogless','grid'].includes(layer))return;if(layer==='grid')return window.mapAimGoOffline();st().layer=layer;opPersist();onlineState='tiles';tileProbeToken=-1;finishTileProbe();if(onlineInfo){render();onlineLabel();}else loadOnlineMap(true);};
+window.mapAimSaveTarget=()=>{if(!xy('target')){status('Сначала отметьте цель.');return;}solve();if(typeof window.tacSaveCurrentTarget==='function'){window.tacSaveCurrentTarget();status('Цель передана в библиотеку.','mapAimStatus');}};
+window.mapAimSaveWeapon=()=>{if(!xy('gun')){status('Сначала отметьте орудие.');return;}solve();if(typeof window.tacSaveCurrentWeapon==='function'){window.tacSaveCurrentWeapon();status('Орудие передано в батарею.','mapAimStatus');}};
+window.mapAimClearImage=()=>{st().image='';st().refs=fresh().refs;$('mapAimImage').value='';opPersist();render();onlineLabel();status('Изображение удалено. GRID продолжает работать.');};
+window.mapAimClearCalibration=()=>{st().refs=fresh().refs;for(const [i,r] of st().refs.entries()){$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;}opPersist();render();stats();status('Стандартная привязка 0…12800 м восстановлена.','mapCalibrationStatus');};
+window.mapAimLoadImage=async input=>{const file=input.files?.[0];if(!file)return;
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>20000000){status('Нужен JPG, PNG или WebP до 20 МБ.');input.value='';return;}
+ const url=URL.createObjectURL(file);try{const pic=new Image();await new Promise((resolve,reject)=>{pic.onload=resolve;pic.onerror=()=>reject(Error('Невозможно открыть изображение'));pic.src=url;});
+ const canvas=document.createElement('canvas');canvas.width=1600;canvas.height=1600;canvas.getContext('2d').drawImage(pic,0,0,1600,1600);
+ let data='';for(const quality of [.82,.7,.55,.4]){data=canvas.toDataURL('image/jpeg',quality);if(data.length<1200000)break;}if(data.length>=1200000)throw Error('Файл изображения слишком велик');
+ const a=st();a.image=data;a.refs=fresh().refs;for(const [i,r] of a.refs.entries()){$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;}
+ opPersist();render();stats();onlineLabel();status(Math.abs(pic.width/pic.height-1)>.1?'Изображение растянуто до квадрата: необходима проверка калибровки.':'Изображение сохранено локально. Для полного снимка поля совпадают с сеткой.');
+ }catch(err){status('Ошибка карты: '+err.message);}finally{URL.revokeObjectURL(url);input.value='';}
+};
+window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;ready=true;
+ svg.addEventListener('pointerdown',down);svg.addEventListener('pointermove',move);svg.addEventListener('pointerup',up);
+ svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();window.mapAimZoom(e.deltaY<0?2:.5);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,()=>{if($('mapaim').classList.contains('active')){render();stats();}},true));
- state().refs.forEach((r,i)=>{$('mapRef'+(i+1)+'X').value=r.x;$('mapRef'+(i+1)+'Y').value=r.y;});$('mapAimLayer').value=state().layer;render();stats();loadTiles();};
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;render();stats();loadOnlineMap();
+};
+function ensureMapStarted(){
+ try{window.mapAimInit();}catch(error){
+  console.error('Не удалось инициализировать карту:',error);
+  const label=$('mapAimTileState');if(label)label.textContent='Ошибка запуска карты · GRID-сетка доступна';
+ }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureMapStarted,{once:true});
+else queueMicrotask(ensureMapStarted);
+window.addEventListener('load',ensureMapStarted,{once:true});
 })();
