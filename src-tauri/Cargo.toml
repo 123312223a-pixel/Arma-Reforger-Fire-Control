@@ -1,6 +1,6 @@
 [package]
 name = "arma-reforger-fire-control"
-version = "3.7.5"
+version = "3.7.6"
 description = "Arma Reforger Fire Control for Windows"
 authors = ["Arma Reforger Fire Control Project"]
 edition = "2021"

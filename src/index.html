@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.7.5 — Desktop</title>
+<title>Arma Reforger Fire Control 3.7.6 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -681,6 +681,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                     <div class="map-aim-details" style="margin-top:0">
                       <h3>Параметры для расчёта</h3>
                       <div class="form-group"><label for="mapWeaponType">Орудие</label><select id="mapWeaponType" onchange="mapAimChangeWeapon(this.value)"><option value="m777">M777</option><option value="m252">M252</option><option value="2b14">2Б14 «Поднос»</option></select></div>
+                      <div class="form-group" id="mapTrajectoryGroup">
+                        <label for="mapTrajectory">Траектория для M777</label>
+                        <select id="mapTrajectory" onchange="mapAimChangeTrajectory(this.value)">
+                          <option value="high">High Angle — навесная</option>
+                          <option value="low">Low Angle — настильная</option>
+                        </select>
+                        <small id="mapTrajectoryHint" class="map-aim-muted">Выбранная траектория применяется к расчёту по карте и по координатам. Для миномётов используется только High Angle.</small>
+                      </div>
                       <div class="form-row"><div class="form-group"><label for="mapGunZ">Высота орудия, м</label><input type="number" id="mapGunZ" step="any" onchange="mapAimSetHeight('gun',this.value)"></div><div class="form-group"><label for="mapTargetZ">Высота цели, м</label><input type="number" id="mapTargetZ" step="any" onchange="mapAimSetHeight('target',this.value)"></div></div>
                       <div class="form-row" style="margin:4px 0 12px">
                         <label style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="mapAutoGunZ" checked onchange="mapAimToggleAutoHeight('gun',this.checked)" style="width:auto;flex:none"> Авто Z орудия</label>
@@ -698,9 +706,18 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                       <div class="map-aim-kv"><span>Орудие · GRID</span><strong id="mapGunGrid">—</strong></div>
                       <div class="map-aim-kv"><span>Цель · GRID</span><strong id="mapTargetGrid">—</strong></div>
                       <div class="map-aim-kv"><span>Дальность по горизонтали</span><strong id="mapDistance">—</strong></div>
+                      <div class="map-aim-kv"><span>Перепад высот ΔZ (цель − орудие)</span><strong id="mapHeightDelta">—</strong></div>
                       <div class="map-aim-kv"><span>Азимут (градусы)</span><strong id="mapBearingDegrees">—</strong></div>
                       <div class="map-aim-kv"><span>Азимут (тысячные)</span><strong id="mapBearingMils">—</strong></div>
                     </div>
+                    <section class="map-aim-details" id="mapTerrainProfilePanel" aria-label="Профиль рельефа между метками" style="margin-top:14px">
+                      <h3>⛰ Профиль рельефа между метками</h3>
+                      <p class="map-aim-muted" id="mapTerrainProfileStatus" role="status">Отметьте орудие и цель, дождитесь загрузки высот Эверона.</p>
+                      <svg id="mapTerrainProfile" viewBox="0 0 660 252" preserveAspectRatio="xMidYMid meet" role="img" aria-label="График высоты земной поверхности между орудием и целью" style="width:100%;height:auto;display:block;border:1px solid #405d48;border-radius:8px;background:#12231c">
+                        <text x="330" y="126" fill="#c2d4b5" text-anchor="middle" font-size="14">Ожидание данных рельефа</text>
+                      </svg>
+                      <p class="map-aim-muted" id="mapTerrainProfileSummary">Профиль построен по высотам земли. Это не баллистическая траектория и не проверка препятствий.</p>
+                    </section>
                     <div class="map-aim-result" aria-live="polite">
                       <h3>Решение по выбранной цели</h3>
                       <div class="map-aim-status" id="mapAimStatus">Выберите точку орудия и точку цели.</div>

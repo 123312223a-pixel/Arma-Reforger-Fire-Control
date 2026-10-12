@@ -1,5 +1,5 @@
 import { formatMapTileUrl } from './map-url.mjs';
-import { EVERON_HEIGHT_URL, packHeightGrid, getTerrainHeight } from './heightmap.mjs';
+import { EVERON_HEIGHT_URL, packHeightGrid, getTerrainHeight, sampleElevationProfile } from './heightmap.mjs';
 import { fetch as nativeHttpFetch } from '@tauri-apps/plugin-http';
 /* v3.7.2 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
@@ -271,7 +271,114 @@ function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,
  $('mapZoomLabel').textContent=z+'×';svg.classList.toggle('is-pan',a.tool==='pan');
  for(const [tool,id] of [['gun','mapModeGun'],['target','mapModeTarget'],['pan','mapModePan']]){$(id).classList.toggle('is-selected',a.tool===tool);$(id).setAttribute('aria-pressed',String(a.tool===tool));}
 }
+
+function updateMapTrajectory() {
+  const main=$('trajectory'),control=$('mapTrajectory'),hint=$('mapTrajectoryHint');
+  if(!main||!control)return;
+  const mortar=$('weaponType').value!=='m777';
+  control.disabled=mortar;
+  control.value=mortar?'high':main.value;
+  if(hint)hint.textContent=mortar
+    ? 'Для M252 и 2Б14 доступна только High Angle. Выбор заблокирован.'
+    : 'Траектория связана с режимом «По координатам»; таблицы и заряды используются те же.';
+}
+function formatHeightDelta(){
+  const gun=$('artZ'),target=$('tgtZ'),label=$('mapHeightDelta');
+  if(!label)return;
+  const z1=Number(gun?.value),z2=Number(target?.value);
+  if(!gun?.value?.trim()||!target?.value?.trim()||!Number.isFinite(z1)||!Number.isFinite(z2)){
+    label.textContent='—';return;
+  }
+  const diff=z2-z1,amount=Math.round(diff*10)/10;
+  label.textContent=(amount>0?'+':'')+amount.toLocaleString('ru-RU')+
+    ' м'+(amount>0?' · цель выше':amount<0?' · цель ниже':' · одна высота');
+}
+function terrainProfileMessage(message,summary){
+  const svg=$('mapTerrainProfile');
+  if(!svg)return;
+  svg.replaceChildren(
+    el('rect',{x:0,y:0,width:660,height:252,fill:'#142820'}),
+    el('text',{x:330,y:124,fill:'#c8d8c0','font-size':15,'text-anchor':'middle'},message)
+  );
+  $('mapTerrainProfileStatus').textContent=message;
+  $('mapTerrainProfileSummary').textContent=summary||
+    'Профиль показывает землю, а не траекторию полёта снаряда.';
+}
+function drawTerrainProfile(){
+  const gun=xy('gun'),target=xy('target');
+  if(!gun||!target||Math.hypot(target.x-gun.x,target.y-gun.y)<1){
+    terrainProfileMessage('Укажите орудие и цель.');return;
+  }
+  if(st().image){
+    terrainProfileMessage('Собственная подложка: профиль Эверона отключён.',
+      'Для собственных изображений привязка к рельефу Эверона не гарантирована.');return;
+  }
+  if(!terrainGrid){
+    terrainProfileMessage(terrainStatus==='loading'?'Карта высот загружается…':'Нет данных рельефа.',
+      'Дождитесь карты высот или импортируйте JSON; поля Z остаются доступны вручную.');return;
+  }
+  const profile=sampleElevationProfile(terrainGrid,gun,target);
+  if(!profile||!profile.known){
+    terrainProfileMessage('Нет доступных высот вдоль выбранной линии.');return;
+  }
+  const svg=$('mapTerrainProfile');
+  const W=660,H=252,L=55,R=18,T=18,BOT=33,iw=W-L-R,ih=H-T-BOT;
+  const gunZ=Number($('artZ').value),tgtZ=Number($('tgtZ').value);
+  const endpoints=[
+    $('artZ').value!==''&&Number.isFinite(gunZ)?gunZ:null,
+    $('tgtZ').value!==''&&Number.isFinite(tgtZ)?tgtZ:null
+  ].filter(v=>v!==null);
+  let low=Math.min(profile.min,...endpoints), high=Math.max(profile.max,...endpoints);
+  const margin=Math.max(8,(high-low)*.13);
+  low-=margin;high+=margin;
+  const X=d=>L+(d/profile.length)*iw,Y=h=>T+ih-(h-low)/(high-low)*ih;
+  svg.replaceChildren(el('rect',{x:0,y:0,width:W,height:H,fill:'#142820'}));
+  for(let i=0;i<=4;i++){
+    const elevation=low+(high-low)*i/4,y=Y(elevation);
+    svg.append(el('line',{x1:L,y1:y,x2:W-R,y2:y,stroke:'#8cae96','stroke-opacity':.20,'stroke-width':1}));
+    svg.append(el('text',{x:L-7,y:y+4,fill:'#c4d8c6','font-size':11,'text-anchor':'end'},
+      Math.round(elevation).toString()));
+  }
+  const knownSegments=[];let part=[];
+  for(const q of profile.points){
+    if(q.height===null){if(part.length)knownSegments.push(part);part=[];continue;}
+    part.push([X(q.distance),Y(q.height)]);
+  }
+  if(part.length)knownSegments.push(part);
+  for(const segment of knownSegments){
+    const points=segment.map(v=>v[0].toFixed(2)+','+v[1].toFixed(2)).join(' ');
+    if(segment.length>1){
+      const closed=points+' '+segment.at(-1)[0].toFixed(2)+','+(T+ih)+' '+
+        segment[0][0].toFixed(2)+','+(T+ih);
+      svg.append(el('polygon',{points:closed,fill:'#417857','fill-opacity':.42}));
+    }
+    svg.append(el('polyline',{points,stroke:'#a6e4aa','stroke-width':2.5,fill:'none',
+      'stroke-linejoin':'round','stroke-linecap':'round'}));
+  }
+  // Dashed line joins the entered elevations only; never depict it as shell flight.
+  if(endpoints.length===2){
+    svg.append(el('line',{x1:L,y1:Y(gunZ),x2:W-R,y2:Y(tgtZ),stroke:'#ffd27b',
+      'stroke-width':1.5,'stroke-dasharray':'8 5','stroke-opacity':.9}));
+    for(const [x,z,fill] of [[L,gunZ,'#7bd7a2'],[W-R,tgtZ,'#ff997b']]){
+      svg.append(el('circle',{cx:x,cy:Y(z),r:4.5,fill,stroke:'#142820','stroke-width':1.5}));
+    }
+  }
+  svg.append(el('line',{x1:L,y1:T+ih,x2:W-R,y2:T+ih,stroke:'#a2bba7','stroke-width':1}));
+  for(const [x,textValue,anchor] of [[L,'0 м','start'],[W-R,Math.round(profile.length).toLocaleString('ru-RU')+' м','end']]){
+    svg.append(el('text',{x,y:H-11,fill:'#d0e3d1','font-size':12,'text-anchor':anchor},textValue));
+  }
+  const incomplete=profile.known!==profile.points.length;
+  $('mapTerrainProfileStatus').textContent=
+    'Рельеф: '+profile.known+'/'+profile.points.length+' отсчётов · шаг ~'+
+    Math.round(profile.sampleSpacing)+' м'+(incomplete?' · есть пропуски':'');
+  $('mapTerrainProfileSummary').textContent=
+    'Земля: мин. '+Math.round(profile.min)+' м, макс. '+Math.round(profile.max)+
+    ' м. Зелёная линия — рельеф, жёлтый пунктир — прямая между введёнными Z.'+
+    ' Не является траекторией снаряда или проверкой препятствий.';
+}
+
 function stats(){const gun=xy('gun'),target=xy('target');$('mapGunGrid').textContent=fmt(gun);$('mapTargetGrid').textContent=fmt(target);
+ updateMapTrajectory();formatHeightDelta();drawTerrainProfile();
  $('mapWeaponType').value=$('weaponType').value;$('mapGunZ').value=$('artZ').value;$('mapTargetZ').value=$('tgtZ').value;
  if(!gun||!target){for(const id of ['mapDistance','mapBearingDegrees','mapBearingMils'])$(id).textContent='—';return;}
  const dx=target.x-gun.x,dy=target.y-gun.y,deg=((Math.atan2(dx,dy)*180/Math.PI)+360)%360,weapon=$('weaponType').value;
@@ -307,7 +414,17 @@ window.mapAimSetTool=tool=>{if(!['gun','target','pan','ref1','ref2'].includes(to
 };
 window.mapAimZoom=factor=>{const a=st();a.zoom=clamp(Math.round(a.zoom*factor*100)/100,1,16);render();opPersist();};
 window.mapAimResetView=()=>{const a=st();a.zoom=1;a.cx=400;a.cy=400;opPersist();render();};
-window.mapAimChangeWeapon=type=>{if(!['m777','m252','2b14'].includes(type))return;$('weaponType').value=type;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));render();solve();};
+window.mapAimChangeWeapon=type=>{if(!['m777','m252','2b14'].includes(type))return;$('weaponType').value=type;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));updateMapTrajectory();render();solve();};
+window.mapAimChangeTrajectory=value=>{
+  if(!['low','high'].includes(value))return;
+  if($('weaponType').value!=='m777'){updateMapTrajectory();return;}
+  const source=$('trajectory');
+  source.value=value;
+  source.dispatchEvent(new Event('input',{bubbles:true}));
+  source.dispatchEvent(new Event('change',{bubbles:true}));
+  updateMapTrajectory();
+  if(xy('gun')&&xy('target'))solve();
+};
 window.mapAimSetHeight=(which,z)=>{if(!['gun','target'].includes(which))return;terrainFlags()[which]=false;const field=$(which==='gun'?'artZ':'tgtZ');field.value=z;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));terrainUi();opPersist();solve();};
 window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();syncAutoTerrain();render();stats();onlineLabel();};
 window.mapAimGoOffline=()=>{++onlineRequest;finishTileProbe();offlineReason='';onlineState='offline';st().layer='grid';$('mapAimLayer').value='grid';opPersist();render();onlineLabel();status('GRID-сетка включена. Можно работать без интернета.','mapAimInstruction');};

@@ -47,6 +47,14 @@ assert.deepEqual(nativeHttpScope?.allow,[{url:'https://pub-65310bd5bcd44d68b30ad
   'HTTP scope must allow only the Everon height JSON URL');
 assert.equal(pkg.dependencies['@tauri-apps/plugin-http'],'^2.0.0');
 console.log('OK: restricted native HTTPS transport for Everon height JSON');
+const mapProfileCode=fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8');
+for(const required of ['mapAimChangeTrajectory','drawTerrainProfile','sampleElevationProfile','formatHeightDelta']){
+ assert.ok(mapProfileCode.includes(required),'Missing new map component: '+required);
+}
+for(const required of ['mapTrajectory','mapHeightDelta','mapTerrainProfile','mapTerrainProfileSummary']){
+ assert.ok(html.includes('id="'+required+'"'),'Missing map UI: '+required);
+}
+console.log('OK: M777 trajectory selection, terrain chart and Delta Z user interface');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
 

@@ -59,3 +59,25 @@ export function getTerrainHeight(grid,east,north,worldSize=EVERON_SIZE_METRES) {
   const tx=x-x0,ty=y-y0;
   return (a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty;
 }
+
+/** Read a north-up/east-right ground elevation section along a straight GRID line. 
+ *  No ballistic predictions are produced here. */
+export function sampleElevationProfile(grid, start, finish, spacing=10) {
+  if (!start || !finish) return null;
+  const {x:x0,y:y0}=start,{x:x1,y:y1}=finish;
+  if (![x0,y0,x1,y1].every(Number.isFinite)) return null;
+  if ([x0,y0,x1,y1].some(v=>v<0||v>EVERON_SIZE_METRES)) return null;
+  const length=Math.hypot(x1-x0,y1-y0);
+  if(length<1) return null;
+  const step=Number.isFinite(spacing)&&spacing>0?spacing:10;
+  const segments=Math.min(1600,Math.max(40,Math.ceil(length/step)));
+  const points=[];let min=Infinity,max=-Infinity,known=0;
+  for(let i=0;i<=segments;i++){
+    const fraction=i/segments,x=x0+(x1-x0)*fraction,y=y0+(y1-y0)*fraction;
+    const height=getTerrainHeight(grid,x,y);
+    if(height!==null&&Number.isFinite(height)){min=Math.min(min,height);max=Math.max(max,height);known++;}
+    points.push({distance:length*fraction,x,y,height:height!==null&&Number.isFinite(height)?height:null});
+  }
+  return {length,points,min:known?min:null,max:known?max:null,known,
+    complete:known===points.length,sampleSpacing:length/segments};
+}
