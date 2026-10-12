@@ -23,13 +23,15 @@ npm run tauri signer generate -- -w "$env:USERPROFILE\.tauri\reforger-updater.ke
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — пароль от ключа, если задан.
 
 **Variables:**
-- `TAURI_UPDATER_PUBLIC_KEY` — содержимое файла `reforger-updater.key.pub` (две строки).
+- `TAURI_UPDATER_PUBLIC_KEY` — **содержимое файла** `reforger-updater.key.pub` (одна base64-строка, как выдаёт Tauri CLI).
 
 > До добавления действительных ключей подписанные релизы не публикуются. Не используй фиктивные ключи.
 
+Секреты должны оставаться только в GitHub Secrets; в публичный репозиторий нельзя добавлять приватный ключ или его пароль.
+
 ## Выпуск версии
 
-1. Измени приложение.
+1. Измени приложение. Для версии 3.6.1 изменяется только инфраструктура подписанных обновлений, не расчётное ядро.
 2. Обнови номера в `package.json`, `src-tauri/tauri.conf.json` и `Cargo.toml` командой `npm run version:set -- 3.6.1`.
 3. Обнови CHANGELOG.
 4. После коммита в main создай тег соответствующей версии (например, `v3.6.1`) и отправь тег в GitHub. Рабочий процесс **Release signed Windows update** запустится и создаст публичный установщик.

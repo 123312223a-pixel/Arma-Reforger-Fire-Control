@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   windows-installer:
+    if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'release:') }}
     runs-on: windows-latest
     steps:
       - name: Check out source
