@@ -1,3 +1,4 @@
+import { formatMapTileUrl } from './map-url.mjs';
 /* v3.7.2 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
 const S=12800,B=800,N='http://www.w3.org/2000/svg', $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -30,8 +31,9 @@ function onlineTiles(svg,a,v){
  if(typeof layer!=='string'||!layer.includes('{z}')||!layer.includes('{x}')||!layer.includes('{y}')){
   queueMicrotask(()=>failOnline('У выбранного слоя нет доступных тайлов.'));return;
  }
- let url;try{url=new URL(layer,mapEndpoint);}catch{queueMicrotask(()=>failOnline('Некорректный адрес тайлов.'));return;}
- if(url.origin!==mapEndpoint){queueMicrotask(()=>failOnline('Адрес сервера карты не прошёл проверку.'));return;}
+ try{formatMapTileUrl(layer,0,0,0,mapEndpoint);}catch{
+  queueMicrotask(()=>failOnline('Некорректный или небезопасный адрес тайлов.'));return;
+ }
  const native=a.layer==='topo'?tiles.maxNativeZoom:(tiles.satelliteMaxNativeZoom??tiles.maxNativeZoom);
  const maxNative=Number.isInteger(native)?Math.min(7,native):5;
  const z=clamp(Math.round(Math.log2(a.zoom))+2,0,maxNative),n=2**z,size=800/n;
@@ -39,7 +41,7 @@ function onlineTiles(svg,a,v){
  const top=clamp(Math.floor(v.y/size),0,n-1),bottom=clamp(Math.floor((v.y+v.size)/size),0,n-1);
  let firstUrl='';
  for(let row=top;row<=bottom;row++)for(let col=left;col<=right;col++){
-  const href=url.href.replaceAll('{z}',String(z)).replaceAll('{x}',String(col)).replaceAll('{y}',String(row));
+  const href=formatMapTileUrl(layer,z,col,row,mapEndpoint);
   if(!firstUrl)firstUrl=href;
   svg.append(el('image',{x:col*size,y:row*size,width:size+.08,height:size+.08,href,preserveAspectRatio:'none','pointer-events':'none'}));
  }

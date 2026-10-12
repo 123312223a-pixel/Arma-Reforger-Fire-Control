@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
+import { formatMapTileUrl } from '../src/map-url.mjs';
 
 const html = fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const expected = fs.readFileSync(new URL('./core.sha256', import.meta.url), 'utf8').trim().split(/\s+/)[0];
@@ -34,3 +35,17 @@ assert.ok(mapJs.includes('window.mapAimInit='),'Missing map initialization');
 console.log('OK: map is linked as a Vite module');
 console.log('OK: original calculation core SHA-256',actual);
 console.log('OK: Windows installer, signed-update preparation, native-state bridge');
+
+assert.equal(
+ formatMapTileUrl('/tiles/everon/topo/{z}/{x}/{y}.webp',3,1,2),
+ 'https://enfumap.com/tiles/everon/topo/3/1/2.webp'
+);
+assert.equal(
+ formatMapTileUrl('/tiles/everon/{z}/{x}/{y}.webp?v=4',2,0,3),
+ 'https://enfumap.com/tiles/everon/2/0/3.webp?v=4'
+);
+assert.throws(()=>formatMapTileUrl('https://evil.example/{z}/{x}/{y}',2,0,0));
+assert.throws(()=>formatMapTileUrl('http://enfumap.com/{z}/{x}/{y}',2,0,0));
+const mapSource = fs.readFileSync(new URL('../src/map-mode.js',import.meta.url),'utf8');
+assert.ok(mapSource.includes('formatMapTileUrl(layer,z,col,row,mapEndpoint)'), 'Map module must use safe URL expansion');
+console.log('OK: Enfumap tile URL expansion uses real numeric coordinates before URL parsing.');
