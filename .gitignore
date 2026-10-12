@@ -1,0 +1,13 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+.DS_Store
+*.log
+*.key
+*.key.pub
+*.pem
+.env
+.env.*
+/src-tauri/tauri.updater.conf.json
+/src-tauri/capabilities/updater.json

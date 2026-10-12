@@ -1,0 +1,40 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+      - name: Install dependencies
+        run: npm install
+      - name: Create Windows app icons
+        run: npm run icon
+      - name: Verify tested ballistic core
+        run: npm run check
+      - name: Build Windows NSIS installer
+        run: npm run build
+      - name: Upload Windows installer as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arma-Reforger-Fire-Control-Windows
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error

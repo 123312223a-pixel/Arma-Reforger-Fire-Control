@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const p='src-tauri/tauri.updater.conf.json';
+const c='src-tauri/capabilities/updater.json';
+assert.ok(fs.existsSync(p)&&fs.existsSync(c),'Updater not configured: run npm run configure:updates');
+const data=JSON.parse(fs.readFileSync(p,'utf8'));
+assert.equal(data.bundle.createUpdaterArtifacts,true);
+assert.ok(data.plugins.updater.pubkey.includes('minisign public key'));
+assert.ok(data.plugins.updater.endpoints.every(u=>/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/releases\/latest\/download\/latest\.json$/.test(u)));
+console.log('Signed update configuration verified.');
