@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.6.3 — Desktop</title>
+<title>Arma Reforger Fire Control 3.7.0 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -434,7 +434,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
 
 
 /* ============================================================
-   FIRE CONTROL 3.6.3 — UX layer. No changes to math or tables.
+   FIRE CONTROL 3.7.0 — UX layer. No changes to math or tables.
    ============================================================ */
 :root{--ux-edge:#405647;--ux-soft:#aabca8;--ux-surface:#1d2a21;--ux-hi:#e5efdc}
 body{padding:14px clamp(12px,1.7vw,28px) 26px;font-size:15px}
@@ -540,12 +540,45 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 @media(max-width:900px){.sidebar{width:100%!important;position:static}.ux-nav-group,.ux-nav-title,.ux-nav-footer{display:none}.sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.sidebar-btn{margin-bottom:0}.ux-context-pills{justify-content:flex-start}}
 @media(max-width:540px){.ux-steps,.ux-steps-3{grid-template-columns:1fr 1fr}.ux-steps button{padding:8px;min-height:53px}.ux-steps b{min-width:28px;width:28px;height:28px}.ux-header.header{padding:18px}.ux-context{padding:13px}.ux-context-pills{width:100%}.ux-actions .op-btn{flex:1 1 45%}.ux-steps strong{font-size:.78rem}.sidebar{grid-template-columns:1fr 1fr}.sidebar-btn kbd,.ux-nav-copy small{display:none}.sidebar-btn{min-height:44px}.sidebar-btn .icon{min-width:20px;width:20px}}
 @media print{.ux-steps,.ux-context,.ux-format-hint,.ux-nav-footer{display:none!important}}
+
+/* Map-guided mode — independent presentation layer, not part of ballistic solver. */
+.map-aim-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(285px,.8fr);gap:18px;align-items:start}
+.map-aim-surface{background:#0d1b15;border:1px solid #476149;border-radius:9px;overflow:hidden}
+.map-aim-canvas{width:100%;display:block;aspect-ratio:1/1;touch-action:none;user-select:none;cursor:crosshair;background:#101c17}
+.map-aim-canvas.is-pan{cursor:grab}.map-aim-canvas.is-moving{cursor:grabbing}
+.map-aim-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:10px 0}
+.map-aim-actions .op-btn{font-size:.77rem}.map-aim-actions .op-btn.is-selected{outline:2px solid #b5d78f;background:#304a34}
+.map-aim-hint{padding:11px 13px;background:#223329;border-radius:5px;color:#d0e2c8;font-size:.81rem;line-height:1.5}
+.map-aim-details{border:1px solid #4b604e;border-radius:7px;padding:14px;background:#1b2b20;margin-top:12px}
+.map-aim-details h3{margin:0 0 12px;font-size:1rem}
+.map-aim-details .form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.map-aim-details .form-group{margin:0 0 10px;min-width:0}
+.map-aim-details .form-group label{display:block;font-size:.8rem;color:#d1e2ca;margin-bottom:6px}
+.map-aim-details input,.map-aim-details select{width:100%;min-width:0;background:#15231a;color:#e8f2e7;border:1px solid #61785a;border-radius:5px;padding:10px}
+.map-aim-details .op-btn{white-space:normal}
+.map-aim-kv{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;font-size:.86rem;border-bottom:1px solid #425541;padding:8px 0}
+.map-aim-kv span:first-child{color:#b4cba8}.map-aim-kv strong{text-align:right;overflow-wrap:anywhere}
+.map-aim-result{border:1px solid #5a7855;background:#1e3021;border-radius:7px;padding:16px;margin-top:12px}
+.map-aim-result h3{margin:0 0 9px;color:#daefc2}
+.map-aim-result .map-aim-primary{font-size:1.32rem;font-weight:760;color:#bcdb93}
+.map-aim-legend{display:flex;flex-wrap:wrap;gap:16px;color:#c4d6be;font-size:.8rem;margin:10px 0}
+.map-aim-legend b{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:5px}
+.map-aim-status{font-size:.83rem;min-height:32px;line-height:1.5;color:#d1dfca}
+.map-aim-muted{font-size:.81rem;line-height:1.55;color:#bacdb1}
+.map-aim-image-upload{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+.map-aim-image-upload input[type=file]{width:auto;max-width:100%}
+.map-aim-calibration{border-top:1px dashed #61735c;margin-top:12px;padding-top:13px}
+.map-aim-calibration summary{cursor:pointer;font-weight:650;color:#e3edd9}
+.map-aim-calibration label{font-size:.8rem}
+.map-aim-marker{stroke:#0c2017;stroke-width:2;pointer-events:none}
+@media(max-width:1120px){.map-aim-layout{grid-template-columns:minmax(0,1fr)}.map-aim-details{max-width:none}}
+@media(max-width:560px){.map-aim-details .form-row{grid-template-columns:1fr}.map-aim-actions{gap:5px}}
 </style>
 </head>
 <body>
 <div class="container">
     <header class="header ux-header">
-        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.6.3</span></div>
+        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.7.0</span></div>
         <h1>Панель управления расчётами</h1>
         <p>Координаты, расчёт, цели и батарея — в одном интерфейсе. Расчёты используют проверенные игровые таблицы.</p>
     </header>
@@ -560,14 +593,15 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
             <button type="button" class="sidebar-btn" data-tab="manual" onclick="switchTab('manual', event)">
                 <span class="icon" aria-hidden="true">◎</span><span class="ux-nav-copy"><strong>Ручной расчёт</strong><small>Дальность и азимут</small></span><kbd>2</kbd>
             </button>
+            <button type="button" class="sidebar-btn" data-tab="mapaim" onclick="switchTab('mapaim', event)"><span class="icon" aria-hidden="true">▧</span><span class="ux-nav-copy"><strong>По карте</strong><small>Две метки → расчёт</small></span><kbd>3</kbd></button>
             <div class="ux-nav-group">ПЛАНИРОВАНИЕ</div>
-            <button type="button" class="sidebar-btn" data-tab="tactical" onclick="switchTab('tactical', event)"><span class="icon" aria-hidden="true">▦</span><span class="ux-nav-copy"><strong>Тактическая карта</strong><small>Орудия, цели, задачи</small></span><kbd>3</kbd></button>
-            <button type="button" class="sidebar-btn" data-tab="windrose" onclick="switchTab('windrose', event)"><span class="icon" aria-hidden="true">✧</span><span class="ux-nav-copy"><strong>Роза ветров</strong><small>Направление и снос</small></span><kbd>4</kbd></button>
-            <button type="button" class="sidebar-btn" data-tab="operations" onclick="switchTab('operations',event)"><span class="icon" aria-hidden="true">▤</span><span class="ux-nav-copy"><strong>Сводка расчёта</strong><small>Показатели и схема</small></span><kbd>6</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="tactical" onclick="switchTab('tactical', event)"><span class="icon" aria-hidden="true">▦</span><span class="ux-nav-copy"><strong>Тактическая карта</strong><small>Орудия, цели, задачи</small></span><kbd>4</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="windrose" onclick="switchTab('windrose', event)"><span class="icon" aria-hidden="true">✧</span><span class="ux-nav-copy"><strong>Роза ветров</strong><small>Направление и снос</small></span><kbd>5</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="operations" onclick="switchTab('operations',event)"><span class="icon" aria-hidden="true">▤</span><span class="ux-nav-copy"><strong>Сводка расчёта</strong><small>Показатели и схема</small></span><kbd>7</kbd></button>
             <div class="ux-nav-group">ДАННЫЕ И ПОМОЩЬ</div>
-            <button type="button" class="sidebar-btn" data-tab="archive" onclick="switchTab('archive',event)"><span class="icon" aria-hidden="true">◷</span><span class="ux-nav-copy"><strong>История и обновления</strong><small>Профили, копии, версии</small></span><kbd>7</kbd></button>
-            <button type="button" class="sidebar-btn" data-tab="guide" onclick="switchTab('guide', event)"><span class="icon" aria-hidden="true">?</span><span class="ux-nav-copy"><strong>Руководство</strong><small>Инструкции и советы</small></span><kbd>5</kbd></button>
-            <div class="ux-nav-footer">Alt + номер — переход к разделу<br>F1 — открыть руководство</div>
+            <button type="button" class="sidebar-btn" data-tab="archive" onclick="switchTab('archive',event)"><span class="icon" aria-hidden="true">◷</span><span class="ux-nav-copy"><strong>История и обновления</strong><small>Профили, копии, версии</small></span><kbd>8</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="guide" onclick="switchTab('guide', event)"><span class="icon" aria-hidden="true">?</span><span class="ux-nav-copy"><strong>Руководство</strong><small>Инструкции и советы</small></span><kbd>6</kbd></button>
+            <div class="ux-nav-footer">Alt + 1…8 — переход к разделу<br>F1 — открыть руководство</div>
         </nav>
 
         <main class="content" id="mainContent">
@@ -584,7 +618,87 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                 <button type="button" class="op-btn" onclick="desktopShowDataLocation()" title="Показать путь к папке данных">▤ Папка данных</button>
                 <label class="op-note" for="themeSelect">Тема:</label>
                 <select class="op-select" id="themeSelect" onchange="setOperationTheme(this.value)"><option value="olive">Олива</option><option value="slate">Сталь</option><option value="amber">Янтарь</option><option value="contrast">Контраст</option></select>
-                <span class="op-note" id="opFeedback" role="status" aria-live="polite">Ctrl+Enter — расчёт · Alt+1…7 — разделы</span>
+                <span class="op-note" id="opFeedback" role="status" aria-live="polite">Ctrl+Enter — расчёт · Alt+1…8 — разделы</span>
+            </div>
+
+
+            <!-- TAB: MAP POINTING -->
+            <div id="mapaim" class="tab-content">
+              <div class="panel">
+                <h2>▧ Наведение по карте</h2>
+                <p class="ux-form-intro">Укажите положение орудия и цели прямо на карте. Fire Control перенесёт координаты в проверенный GRID-калькулятор и автоматически рассчитает дальность, азимут, заряд и угол возвышения.</p>
+                <div class="ux-format-hint"><span aria-hidden="true">ⓘ</span> Карта Эверона — <strong>12 800 × 12 800 м</strong>. По умолчанию загружается онлайн-подложка с точными игровыми координатами. Без интернета остаётся GRID-сетка. По желанию можно загрузить свою карту и привязать её вручную.</div>
+                <div class="map-aim-actions" aria-label="Слои игровой карты">
+                  <label for="mapAimLayer">Изображение карты:</label>
+                  <select id="mapAimLayer" class="op-select" onchange="mapAimSelectLayer(this.value)">
+                    <option value="topo">Топографическая · онлайн</option>
+                    <option value="satellite">Спутниковая · онлайн</option>
+                    <option value="fogless">Без тумана · онлайн</option>
+                    <option value="grid">Только сетка · офлайн</option>
+                  </select>
+                  <span class="op-pill" id="mapAimTileState" role="status">Проверяем доступность онлайн-карты…</span>
+                </div>
+                <p class="map-aim-muted">Карта по игровым метрам: <a href="https://enfumap.com/developers" target="_blank" rel="noopener noreferrer">© Enfumap</a> (топографическая, спутниковая и без тумана). Тайлы загружаются напрямую с сервера, не входят в установщик. В режиме офлайн карта отображается сеткой.</p>
+                <div class="map-aim-actions" aria-label="Инструменты нанесения точек">
+                  <button type="button" class="op-btn is-selected" id="mapModeGun" onclick="mapAimSetTool('gun')" aria-pressed="true">◆ Поставить орудие</button>
+                  <button type="button" class="op-btn" id="mapModeTarget" onclick="mapAimSetTool('target')" aria-pressed="false">● Поставить цель</button>
+                  <button type="button" class="op-btn" id="mapModePan" onclick="mapAimSetTool('pan')" aria-pressed="false">✋ Сдвиг карты</button>
+                  <button type="button" class="op-btn" onclick="mapAimZoom(2)" title="Приблизить">＋</button>
+                  <button type="button" class="op-btn" onclick="mapAimZoom(0.5)" title="Отдалить">−</button>
+                  <button type="button" class="op-btn" onclick="mapAimResetView()">⌖ Вся карта</button>
+                  <span class="op-pill" id="mapZoomLabel">1×</span>
+                </div>
+                <div class="map-aim-layout">
+                  <div>
+                    <div class="map-aim-surface">
+                      <svg id="mapAimSvg" class="map-aim-canvas" viewBox="0 0 800 800" role="img" aria-label="Интерактивная карта Эверона с координатной сеткой, орудием и целью"></svg>
+                    </div>
+                    <div class="map-aim-legend"><span><b style="background:#96e7a4"></b> Орудие</span><span><b style="background:#ff957e"></b> Цель</span><span>Север ↑ · Восток →</span><span id="mapPointerCoords">GRID —</span></div>
+                    <div class="map-aim-hint" id="mapAimInstruction" aria-live="polite">Выбрано «Орудие»: нажмите на карту, затем переключитесь на «Цель» и поставьте вторую метку.</div>
+                    <div class="map-aim-details">
+                      <h3>Изображение игровой карты</h3>
+                      <div class="map-aim-image-upload">
+                        <label for="mapAimImage" class="op-note">PNG/JPG/WebP:</label>
+                        <input type="file" id="mapAimImage" accept="image/png,image/jpeg,image/webp" onchange="mapAimLoadImage(this)" aria-label="Загрузить изображение карты">
+                        <button class="op-btn" type="button" onclick="mapAimClearImage()">Удалить подложку</button>
+                      </div>
+                      <p class="map-aim-muted">Если загружаете собственное изображение, оно заменяет онлайн-слой. Для скриншотов с полями используйте ручную калибровку. Онлайн-тайлы калибровать не нужно.</p>
+                      <details class="map-aim-calibration" id="mapAimCalibration">
+                        <summary>⚙ Калибровать изображение по двум точкам</summary>
+                        <p class="map-aim-muted">Найдите на изображении две известные точки GRID, желательно по диагонали. Введите их игровые X/Y, затем нажмите «Отметить» и кликните соответствующее место на карте. Оси должны быть ориентированы севером вверх, без поворота.</p>
+                        <div class="form-row"><div class="form-group"><label for="mapRef1X">Точка 1 · X</label><input id="mapRef1X" type="number" min="0" max="12800" value="0"></div><div class="form-group"><label for="mapRef1Y">Точка 1 · Y</label><input id="mapRef1Y" type="number" min="0" max="12800" value="12800"></div></div>
+                        <button type="button" class="op-btn" onclick="mapAimSetTool('ref1')">1. Отметить точку 1 на карте</button>
+                        <div class="form-row" style="margin-top:12px"><div class="form-group"><label for="mapRef2X">Точка 2 · X</label><input id="mapRef2X" type="number" min="0" max="12800" value="12800"></div><div class="form-group"><label for="mapRef2Y">Точка 2 · Y</label><input id="mapRef2Y" type="number" min="0" max="12800" value="0"></div></div>
+                        <button type="button" class="op-btn" onclick="mapAimSetTool('ref2')">2. Отметить точку 2 на карте</button>
+                        <div class="map-aim-status" id="mapCalibrationStatus">Стандартная привязка полного изображения: 0…12 800 м по обеим осям.</div>
+                        <button type="button" class="op-btn" onclick="mapAimClearCalibration()">↺ Сбросить к полной карте</button>
+                      </details>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="map-aim-details" style="margin-top:0">
+                      <h3>Параметры для расчёта</h3>
+                      <div class="form-group"><label for="mapWeaponType">Орудие</label><select id="mapWeaponType" onchange="mapAimChangeWeapon(this.value)"><option value="m777">M777</option><option value="m252">M252</option><option value="2b14">2Б14 «Поднос»</option></select></div>
+                      <div class="form-row"><div class="form-group"><label for="mapGunZ">Высота орудия, м</label><input type="number" id="mapGunZ" step="1" onchange="mapAimSetHeight('gun',this.value)"></div><div class="form-group"><label for="mapTargetZ">Высота цели, м</label><input type="number" id="mapTargetZ" step="1" onchange="mapAimSetHeight('target',this.value)"></div></div>
+                      <p class="map-aim-muted">Высоты вводятся вручную: обычное изображение карты не содержит достоверных данных о рельефе. Снаряд, заряд, ветер и траектория используются из вкладки «По координатам».</p>
+                      <button type="button" class="op-btn" onclick="uxGoTab('coords')">⚙ Снаряд, ветер и ручные поправки →</button>
+                      <div class="map-aim-kv"><span>Орудие · GRID</span><strong id="mapGunGrid">—</strong></div>
+                      <div class="map-aim-kv"><span>Цель · GRID</span><strong id="mapTargetGrid">—</strong></div>
+                      <div class="map-aim-kv"><span>Дальность по горизонтали</span><strong id="mapDistance">—</strong></div>
+                      <div class="map-aim-kv"><span>Азимут (градусы)</span><strong id="mapBearingDegrees">—</strong></div>
+                      <div class="map-aim-kv"><span>Азимут (тысячные)</span><strong id="mapBearingMils">—</strong></div>
+                    </div>
+                    <div class="map-aim-result" aria-live="polite">
+                      <h3>Решение по выбранной цели</h3>
+                      <div class="map-aim-status" id="mapAimStatus">Выберите точку орудия и точку цели.</div>
+                      <div class="map-aim-kv"><span>Угол возвышения</span><strong class="map-aim-primary" id="mapResultElev">—</strong></div>
+                      <div class="map-aim-kv"><span>Заряд / кольца</span><strong id="mapResultCharge">—</strong></div>
+                      <div class="map-aim-kv"><span>Время полёта</span><strong id="mapResultTof">—</strong></div>
+                      <div class="map-aim-actions"><button type="button" class="op-btn primary" onclick="mapAimRecalculate()">↻ Пересчитать</button><button type="button" class="op-btn" onclick="mapAimSaveTarget()">☆ Сохранить цель</button><button type="button" class="op-btn" onclick="mapAimSaveWeapon()">▣ Сохранить орудие</button><button type="button" class="op-btn" onclick="copyFireSolution()">⎘ Копировать решение</button></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- TAB: COORDINATES -->
@@ -883,8 +997,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
                         <div class="form-group">
                             <label>Высота позиции (м)</label>
                             <input type="number" id="mArtZ" value="100" step="1">
-                        </div>
-                        <div class="form-group">
+                        </div>                        <div class="form-group">
                             <label>Высота цели (м)</label>
                             <input type="number" id="mTgtZ" value="100" step="1">
                         </div>
@@ -1243,7 +1356,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
             <!-- TAB: GUIDE -->
             <div id="guide" class="tab-content">
   <div class="panel">
-    <h2>📖 Руководство · Fire Control Desktop 3.6.2</h2>
+    <h2>📖 Руководство · Fire Control Desktop 3.7.0</h2>
     <p class="guide-lead">Руководство по Windows-приложению Arma Reforger Fire Control: от первого расчёта до работы с батареей, библиотекой целей и подписанными обновлениями. Расчётное ядро и баллистические таблицы сохранены без изменений.</p>
     <div class="sub-tabs" aria-label="Темы руководства">
       <button class="sub-tab-btn active" onclick="switchSubTab('g-intro',event)">🚀 Быстрый старт</button>
@@ -1275,13 +1388,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
         <ul>
           <li><strong>По координатам</strong> — расчёт по местоположению орудия и цели.</li>
           <li><strong>Ручной ввод</strong> — расчёт по дистанции, азимуту и высотам без GRID.</li>
+          <li><strong>По карте</strong> — третий режим: две метки на интерактивном Эвероне, автоматические координаты и расчёт.</li>
           <li><strong>Тактическая карта</strong> — несколько орудий, именованные цели, история, сравнение зарядов, таймер и огневые задачи.</li>
           <li><strong>Роза ветров</strong> — отдельная визуализация направлений.</li>
           <li><strong>Оперативная панель</strong> — крупные результаты последнего расчёта и схемы.</li>
           <li><strong>История и аудит</strong> — профили, история расчётов, общий JSON и центр обновлений.</li>
           <li><strong>Гайд</strong> — настоящее руководство.</li>
         </ul>
-        <p>Верхняя панель позволяет копировать результат, сохранить профиль, переключить компактный режим, тему и открыть обновления. Приложение работает офлайн; интернет нужен лишь для проверки и загрузки новых версий.</p>
+        <p>Верхняя панель позволяет копировать результат, сохранить профиль, переключить компактный режим, тему и открыть обновления. Расчётная часть работает офлайн. Для картографических подложек Enfumap и проверки обновлений требуется интернет.</p>
       </div>
     </div>
 
@@ -1291,6 +1405,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
         <p>В каждом поле X и Y вводится <strong>пять цифр</strong>. Внутри калькулятора <code>04770</code> трактуется как число 4770: разница на единицу соответствует одному метру <em>в принятой модели координат</em>. Дополнительного умножения на 10 программа не делает.</p>
         <p>Восток — увеличение X, север — увеличение Y. Дальность определяется через <code>√(ΔX²+ΔY²)</code>; геометрический азимут — от севера по часовой стрелке. Z задаётся отдельно, в одной системе высот для обеих точек.</p>
         <div class="info">Пример: если цель была <code>07430 / 05000</code> и задано «100 м восточнее», новая X будет <code>07530</code>, Y не изменится. Проверьте, что игровая карта отображает координаты в той же системе.</div>
+        <h4>Режим «По карте» (Alt+3)</h4>
+        <p>Выберите Эверон, поставьте метку орудия, затем цель. В окне карты автоматически вычисляются игровая дальность и азимут; данные поступают в исходный калькулятор. Доступны панорамирование, масштабирование и выбор слоя. Онлайн-тайлы <a href="https://enfumap.com/developers" target="_blank" rel="noopener noreferrer">Enfumap</a> привязаны к игровым метрам, при отсутствии сети работает GRID-сетка. Высоты Z задайте вручную, так как изображение не определяет рельеф автоматически. Собственный снимок при необходимости калибруется по двум точкам.</p>
         <h4>Режим «Ручной ввод»</h4>
         <p>Вместо GRID задайте <strong>дальность в метрах</strong>, <strong>азимут в градусах</strong>, высоту орудия и цели. Это удобно, если расстояние и направление уже известны. Ручные поправки по сторонам света здесь также работают.</p>
       </div>
@@ -1435,7 +1551,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
         <h3>Горячие клавиши</h3>
         <ul>
           <li><strong>Ctrl + Enter</strong> — рассчитать активный режим; при фокусе в поле поправок — применить ожидающую ручную поправку.</li>
-          <li><strong>Alt + 1…7</strong> — переключение разделов: 1 Координаты, 2 Ручной ввод, 3 Карта, 4 Роза ветров, 5 Гайд, 6 Оперативная панель, 7 История и аудит.</li>
+          <li><strong>Alt + 1…8</strong> — переключение разделов: 1 Координаты, 2 Ручной ввод, 3 Карта, 4 Роза ветров, 5 Гайд, 6 Оперативная панель, 7 История и аудит.</li>
           <li><strong>Esc</strong> вне текстового поля — напомнить подсказку по клавишам.</li>
         </ul>
         <p>Клавиатурные сочетания действуют внутри активного окна приложения; отдельные сочетания могут перехватываться Windows или другим ПО.</p>
@@ -1880,8 +1996,7 @@ function calculateCoords() {
                 document.getElementById('cVtPeak').textContent = Math.round(sol.peakAlt);
             } else {
                 document.getElementById('cVtCard').style.display = 'none';
-                document.getElementById('cVtBox').style.display = 'none';
-            }
+                document.getElementById('cVtBox').style.display = 'none';            }
         } else {
             document.getElementById('cVtCard').style.display = 'none';
             document.getElementById('cVtBox').style.display = 'none';
@@ -2199,7 +2314,7 @@ function loadHistory(id){const x=opState.history.find(x=>x.id===id);if(!x)return
 function clearHistory(){if(!confirm('Удалить историю расчётов? Профили останутся.'))return;opState.history=[];opLast=null;opPersist();opDraw();opRenderArchive();}
 function opRenderArchive(){const target=document.getElementById('bookmarkList');target.replaceChildren();if(!opState.bookmarks.length)target.textContent='Нет сохранённых профилей.';opState.bookmarks.forEach(b=>{const line=document.createElement('div');line.className='operation-toolbar';const name=document.createElement('span');name.textContent=b.label;name.style.flex='1';const load=document.createElement('button');load.className='op-btn';load.textContent='Загрузить';load.onclick=()=>loadBookmark(b.id);const del=document.createElement('button');del.className='op-btn';del.textContent='Удалить';del.onclick=()=>deleteBookmark(b.id);line.append(name,load,del);target.append(line);});const rows=document.getElementById('historyRows');rows.replaceChildren();if(!opState.history.length){const tr=document.createElement('tr');tr.innerHTML='<td colspan="6">История пуста</td>';rows.append(tr);}opState.history.forEach(h=>{const tr=document.createElement('tr');[h.when,h.mode==='coords'?'GRID':'Ручной',h.weapon,String(h.dist)+' м',h.elev+' / '+h.reqAz].forEach(t=>{const td=document.createElement('td');td.textContent=t;tr.append(td);});const td=document.createElement('td'),b=document.createElement('button');b.className='op-btn';b.textContent='Загрузить';b.onclick=()=>loadHistory(h.id);td.append(b);tr.append(td);rows.append(tr);});}
 function downloadOperations(){const data=JSON.stringify({version:3,exportedAt:new Date().toISOString(),...opState},null,2);const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));link.download='arma-reforger-profiles.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);}
-async function importOperations(input){const file=input.files?.[0];if(!file)return;try{if(file.size>1000000)throw Error('Файл слишком большой');const data=JSON.parse(await file.text());if(data.version!==3||!Array.isArray(data.history)||!Array.isArray(data.bookmarks))throw Error('Неподдерживаемый формат');opState.history=data.history.slice(0,80).filter(x=>x&&typeof x==='object');opNormalizeHistoryAngularScale(opState.history);opState.bookmarks=data.bookmarks.slice(0,40).filter(x=>x&&typeof x==='object');opState.inputs=data.inputs&&typeof data.inputs==='object'?data.inputs:{};setOperationTheme(data.theme);toggleCompact(!!data.compact);opRestoreInputs(opState.inputs);opLast=null;opPersist();opRenderArchive();opDraw();opNotify('Профили и история импортированы.');}catch(e){opNotify('Импорт не выполнен: '+e.message);}input.value='';}
+async function importOperations(input){const file=input.files?.[0];if(!file)return;try{if(file.size>3500000)throw Error('Файл слишком большой');const data=JSON.parse(await file.text());if(data.version!==3||!Array.isArray(data.history)||!Array.isArray(data.bookmarks))throw Error('Неподдерживаемый формат');opState.history=data.history.slice(0,80).filter(x=>x&&typeof x==='object');opNormalizeHistoryAngularScale(opState.history);opState.bookmarks=data.bookmarks.slice(0,40).filter(x=>x&&typeof x==='object');opState.inputs=data.inputs&&typeof data.inputs==='object'?data.inputs:{};if(data.mapAim&&typeof data.mapAim==='object')opState.mapAim=data.mapAim;setOperationTheme(data.theme);toggleCompact(!!data.compact);opRestoreInputs(opState.inputs);opLast=null;opPersist();opRenderArchive();opDraw();opNotify('Профили и история импортированы.');}catch(e){opNotify('Импорт не выполнен: '+e.message);}input.value='';}
 function svgNode(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,String(v)));if(text!==undefined)el.textContent=text;return el;}
 function opDraw(){const r=opLast;[['opElev','elev'],['opAz','reqAz'],['opCharge','charge'],['opTof','tof'],['opDistance','dist']].forEach(([id,key])=>document.getElementById(id).textContent=r?.[key]??'—');document.getElementById('opVt').textContent=r?.vt??'—';document.getElementById('opModeLabel').textContent=r?`${r.weapon} · ${r.mode==='coords'?'GRID':'Ручной'} · ${r.when}`:'Расчётов пока нет';drawCoords(r);drawTrajectory(r);}
 function drawCoords(r){const s=document.getElementById('coordPlot');s.replaceChildren();for(let i=0;i<=10;i++){const q=42+i*49;s.append(svgNode('line',{x1:q,y1:25,x2:q,y2:325,stroke:'#243d31','stroke-width':1}),svgNode('line',{x1:42,y1:25+i*30,x2:532,y2:25+i*30,stroke:'#243d31','stroke-width':1}));}s.append(svgNode('text',{x:535,y:348,fill:'#a9ca9a','font-size':13},'X → восток'),svgNode('text',{x:14,y:17,fill:'#a9ca9a','font-size':13},'↑ север'));if(!r)return;
@@ -2229,7 +2344,7 @@ function setupOperations(){try{const saved=JSON.parse(localStorage.getItem(OP_KE
  window.calculateManual=function(){origManual();opAfterCalculate('manual');};
  document.getElementById('coords').addEventListener('input',()=>{opState.inputs=opCapture();opPersist();});document.getElementById('manual').addEventListener('input',()=>{opState.inputs=opCapture();opPersist();});
  document.getElementById('coords').addEventListener('change',()=>{opState.inputs=opCapture();opPersist();});document.getElementById('manual').addEventListener('change',()=>{opState.inputs=opCapture();opPersist();});
- document.addEventListener('keydown',e=>{const focus=e.target.closest('input,select,textarea');if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();if(document.getElementById('manual').classList.contains('active'))calculateManual();else calculateCoords();}else if(e.altKey&&/^[1-7]$/.test(e.key)){e.preventDefault();const id=['coords','manual','tactical','windrose','guide','operations','archive'][Number(e.key)-1];const btn=[...document.querySelectorAll('.sidebar-btn')].find(b=>b.getAttribute('onclick')?.includes("'"+id+"'"));if(btn)btn.click();}else if(!focus&&e.key==='Escape'){opNotify('Ctrl+Enter: расчёт · Alt+1…7: разделы');}});
+ document.addEventListener('keydown',e=>{const focus=e.target.closest('input,select,textarea');if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();if(document.getElementById('mapaim').classList.contains('active'))mapAimRecalculate();else if(document.getElementById('manual').classList.contains('active'))calculateManual();else calculateCoords();}else if(e.altKey&&/^[1-8]$/.test(e.key)){e.preventDefault();const id=['coords','manual','mapaim','tactical','windrose','guide','operations','archive'][Number(e.key)-1];const btn=[...document.querySelectorAll('.sidebar-btn')].find(b=>b.getAttribute('onclick')?.includes("'"+id+"'"));if(btn)btn.click();}else if(!focus&&e.key==='Escape'){opNotify('Ctrl+Enter: расчёт · Alt+1…8: разделы');}});
  opRenderArchive();opDraw();}
 // Desktop boot orchestrates setupOperations() after restoring persistent AppLocalData state.
 
@@ -2786,6 +2901,7 @@ window.desktopBootAndSetup=async function(){
  // Preserve initialization order from the original 3.5 HTML.
  setupOperations();
  window.uxInit();
+ if(typeof window.mapAimInit === 'function')window.mapAimInit();
  corrSetup();
  if(typeof window.tacSetup==='function')setTimeout(window.tacSetup,0);
  window.desktopNativeSaveEnabled=true;
@@ -2798,6 +2914,7 @@ window.addEventListener('load',window.desktopBootAndSetup);
 const uxSections = {
  coords: ['Расчёт по координатам','Введите GRID орудия и цели, затем получите решение по таблице.'],
  manual: ['Ручной расчёт','Введите дальность и азимут в градусах.'],
+ mapaim: ['Наведение по карте','Отметьте орудие и цель на карте, чтобы сразу получить расчёт.'],
  tactical: ['Тактическая карта','Выбирайте сохранённые позиции и цели, управляйте батареей.'],
  windrose: ['Роза ветров','Смотрите направление и влияние ветра в схематичном виде.'],
  guide: ['Руководство','Откройте инструкцию по каждому разделу приложения.'],
@@ -2878,8 +2995,7 @@ function uxCheckFields(mode){
    const hint=document.getElementById(mode==='coords'?'uxCoordsHint':'uxManualHint');
    if(hint){hint.textContent='Исправьте подсвеченные поля и повторите расчёт.';hint.classList.add('is-error');}
    return false;
- }
- return true;
+ } return true;
 }
 function uxAfterCalc(mode){
  const result=document.getElementById(mode==='coords'?'cResElev':'mResElev')?.textContent||'';
@@ -2932,7 +3048,7 @@ window.uxInit=function(){
  const originalCoords=window.calculateCoords,originalManual=window.calculateManual,originalTab=window.switchTab;
  window.calculateCoords=function(){if(!uxCheckFields('coords'))return;originalCoords();uxAfterCalc('coords');};
  window.calculateManual=function(){if(!uxCheckFields('manual'))return;originalManual();uxAfterCalc('manual');};
- window.switchTab=function(tabId,event){originalTab(tabId,event);uxUpdateContext();};
+ window.switchTab=function(tabId,event){originalTab(tabId,event);uxUpdateContext();if(tabId==='mapaim'&&typeof window.mapAimRefresh==='function')window.mapAimRefresh();};
  for(const mode of ['coords','manual']){
    const tab=document.getElementById(mode);
    tab.addEventListener('input',event=>{
@@ -2950,6 +3066,7 @@ window.uxInit=function(){
 };
 
 </script>
+<script src="./map-mode.js"></script>
 <script type="module" src="./update-manager.js"></script>
 </body>
 </html>
