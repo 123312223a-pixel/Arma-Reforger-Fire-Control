@@ -70,7 +70,7 @@ export function sampleElevationProfile(grid, start, finish, spacing=10) {
   const length=Math.hypot(x1-x0,y1-y0);
   if(length<1) return null;
   const step=Number.isFinite(spacing)&&spacing>0?spacing:10;
-  const segments=Math.min(1600,Math.max(40,Math.ceil(length/step)));
+  const segments=Math.min(2200,Math.max(40,Math.ceil(length/step)));
   const points=[];let min=Infinity,max=-Infinity,known=0;
   for(let i=0;i<=segments;i++){
     const fraction=i/segments,x=x0+(x1-x0)*fraction,y=y0+(y1-y0)*fraction;
