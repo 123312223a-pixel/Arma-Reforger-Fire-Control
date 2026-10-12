@@ -1,11 +1,37 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-where node >nul 2>&1 || (echo Node.js is required. & pause & exit /b 1)
-where cargo >nul 2>&1 || (echo Rust/Cargo is required. & pause & exit /b 1)
-call npm install || exit /b 1
-call npm run icon || exit /b 1
-call npm run check || exit /b 1
-call npm run build || exit /b 1
-echo Done. Installer: src-tauri\target\release\bundle\nsis\
+echo.
+echo ================================================
+echo  ARMA REFORGER FIRE CONTROL - WINDOWS BUILD
+ echo ================================================
+echo.
+where node >nul 2>nul
+if errorlevel 1 (
+  echo ERROR: Node.js not found. Install Node.js 22 LTS.
+  pause
+  exit /b 1
+)
+where cargo >nul 2>nul
+if errorlevel 1 (
+  echo ERROR: Rust/Cargo not found. Install Rust and MSVC C++ Build Tools.
+  pause
+  exit /b 1
+)
+call npm install
+if errorlevel 1 goto error
+call npm run check
+if errorlevel 1 goto error
+call npm run build
+if errorlevel 1 goto error
+echo.
+echo SUCCESS. Installer directory:
+echo %CD%\src-tauri\target\release\bundle\nsis
+explorer "%CD%\src-tauri\target\release\bundle\nsis"
 pause
+exit /b 0
+:error
+echo.
+echo BUILD FAILED. Check the messages above.
+pause
+exit /b 1

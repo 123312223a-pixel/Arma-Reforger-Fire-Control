@@ -15,9 +15,6 @@ function validMinisign(raw) {
     /^[A-Za-z0-9+/=]+$/.test(lines[1]);
 }
 
-// Tauri CLI writes .pub as ONE base64-encoded line. Its decoded text is
-// a two-line minisign key. Older documentation sometimes shows these
-// decoded lines instead, so accept either representation.
 let pubkey;
 if (!supplied.includes('\n') && /^[A-Za-z0-9+/=]+$/.test(supplied)) {
   const bytes = Buffer.from(supplied, 'base64');

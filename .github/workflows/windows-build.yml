@@ -1,8 +1,6 @@
 name: Build Windows installer
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,27 +11,25 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'release:') }}
     runs-on: windows-latest
     steps:
-      - name: Check out source
+      - name: Check out project
         uses: actions/checkout@v4
-      - name: Install Node.js 22
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      - name: Cache Rust
+      - name: Cache Rust artifacts
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-      - name: Install dependencies
+      - name: Install npm dependencies
         run: npm install
-      - name: Create Windows app icons
-        run: npm run icon
-      - name: Verify tested ballistic core
+      - name: Verify bundled calculation core and project
         run: npm run check
-      - name: Build Windows NSIS installer
+      - name: Build NSIS installer
         run: npm run build
-      - name: Upload Windows installer as workflow artifact
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
           name: Arma-Reforger-Fire-Control-Windows

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Offline main window with native AppLocalData state commands",
+  "description": "Minimal permissions for the main offline window. Native state commands are limited to AppLocalData.",
   "windows": [
     "main"
   ],

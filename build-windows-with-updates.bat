@@ -1,13 +1,34 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-if "%FIRE_CONTROL_REPOSITORY%"=="" (echo Set FIRE_CONTROL_REPOSITORY=owner/repo & pause & exit /b 1)
-if "%TAURI_UPDATER_PUBLIC_KEY%"=="" if "%TAURI_UPDATER_PUBLIC_KEY_FILE%"=="" (echo Set TAURI_UPDATER_PUBLIC_KEY_FILE to your public key & pause & exit /b 1)
-if "%TAURI_SIGNING_PRIVATE_KEY%"=="" (echo Set TAURI_SIGNING_PRIVATE_KEY to your private key path or content & pause & exit /b 1)
-call npm install || exit /b 1
-call npm run icon || exit /b 1
-call npm run configure:updates || exit /b 1
-call npm run release:verify || exit /b 1
-call npm run build:updates || exit /b 1
-echo Signed installer is ready in src-tauri\target\release\bundle\nsis\
+echo =================================================
+echo  ARMA REFORGER FIRE CONTROL - SIGNED UPDATES BUILD
+ echo =================================================
+echo.
+if not exist "src-tauri\tauri.updater.conf.json" (
+ echo ERROR: First run the updater configuration with your public key and GitHub repository.
+ echo See UPDATES.md
+ pause
+ exit /b 1
+)
+if "%TAURI_SIGNING_PRIVATE_KEY%"=="" (
+ echo ERROR: Set TAURI_SIGNING_PRIVATE_KEY in the environment.
+ echo NEVER commit or share the private key.
+ pause
+ exit /b 1
+)
+call npm install
+if errorlevel 1 goto error
+call npm run check
+if errorlevel 1 goto error
+call npm run build:updates
+if errorlevel 1 goto error
+echo Signed NSIS installer and .sig files:
+echo %CD%\src-tauri\target\release\bundle\nsis
+explorer "%CD%\src-tauri\target\release\bundle\nsis"
 pause
+exit /b 0
+:error
+echo BUILD FAILED
+pause
+exit /b 1

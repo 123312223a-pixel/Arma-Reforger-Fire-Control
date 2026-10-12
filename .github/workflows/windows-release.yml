@@ -15,51 +15,46 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release:')) }}
     runs-on: windows-latest
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-      - name: Verify signing configuration and configure trusted update endpoint
+      - name: Require signing secrets and configure trusted update channel
         shell: pwsh
         env:
           TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
           FIRE_CONTROL_REPOSITORY: ${{ github.repository }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          if (-not $env:TAURI_UPDATER_PUBLIC_KEY) { throw 'Set repository variable TAURI_UPDATER_PUBLIC_KEY first' }
-          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw 'Set secret TAURI_SIGNING_PRIVATE_KEY first' }
+          if (-not $env:TAURI_UPDATER_PUBLIC_KEY) { throw 'Set vars.TAURI_UPDATER_PUBLIC_KEY first.' }
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw 'Set secrets.TAURI_SIGNING_PRIVATE_KEY first.' }
           node scripts/configure-updater.mjs
-      - name: Verify version tag
+      - name: Validate version tag
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
-          $version = node -p "require('./package.json').version"
-          if ("${{ github.ref_name }}" -ne "v$version") { throw "Git tag must match package version v$version" }
+          $v = node -p "require('./package.json').version"
+          if ("${{ github.ref_name }}" -ne "v$v") { throw "Git tag must be v$v" }
       - name: Install npm dependencies
         run: npm install
-      - name: Create Windows app icons
-        run: npm run icon
-      - name: Verify source and signed-update endpoint
+      - name: Verify core and configured channel
         run: npm run release:verify
-      - name: Build signed NSIS and publish GitHub Release
-        uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: Arma Reforger Fire Control v__VERSION__
+          releaseName: 'Arma Reforger Fire Control v__VERSION__'
+          generateReleaseNotes: true
           releaseDraft: false
           prerelease: false
-          generateReleaseNotes: true
           uploadUpdaterJson: true
           updaterJsonPreferNsis: true
+          uploadWorkflowArtifacts: true
           args: '--features signed-updates --config src-tauri/tauri.updater.conf.json'

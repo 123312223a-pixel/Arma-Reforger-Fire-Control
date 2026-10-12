@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arma Reforger Fire Control 3.6.2 — Desktop</title>
+<title>Arma Reforger Fire Control 3.6.3 — Desktop</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -432,38 +432,150 @@ body[data-theme="amber"] .fc-update-note{background:#221b0f}
 body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-color:#fff}
 @media (max-width:600px){.fc-update-head{align-items:flex-start}.fc-update-actions>*{flex:1 1 auto}}
 
+
+/* ============================================================
+   FIRE CONTROL 3.6.3 — UX layer. No changes to math or tables.
+   ============================================================ */
+:root{--ux-edge:#405647;--ux-soft:#aabca8;--ux-surface:#1d2a21;--ux-hi:#e5efdc}
+body{padding:14px clamp(12px,1.7vw,28px) 26px;font-size:15px}
+.container{max-width:1700px}
+.ux-header.header{padding:20px 28px;margin-bottom:14px;border-left-width:4px;min-height:0}
+.ux-header.header:after{content:'';display:none}
+.ux-brandline{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ux-brand-emblem{font-size:25px;color:var(--accent)}
+.ux-kicker{font:750 .68rem var(--monospace);letter-spacing:.12em;color:#becfab}
+.ux-version{color:#daefb8;background:#344833;border:1px solid #597353;font:700 .7rem var(--monospace);border-radius:4px;padding:2px 8px}
+.ux-header.header h1{font-size:clamp(1.35rem,2vw,1.9rem);margin:0 0 4px;text-transform:none;letter-spacing:0}
+.ux-header.header p{font:400 .84rem/1.45 'Segoe UI',sans-serif;color:#afc0aa;max-width:none}
+.app-layout{gap:14px}
+.sidebar{width:254px;padding:12px;top:12px}
+.sidebar:before{content:none!important}
+.ux-nav-title{font:800 .71rem var(--monospace);letter-spacing:.14em;color:#cfdfc0;padding:10px 10px 14px}
+.ux-nav-group{font:700 .67rem var(--monospace);letter-spacing:.12em;color:#8ea78d;padding:13px 12px 7px;margin-top:4px;border-top:1px solid #324437}
+.sidebar-btn{padding:10px 9px!important;gap:10px;margin-bottom:2px;align-items:center;border-left-width:3px!important;min-height:53px}
+.sidebar-btn .icon{width:25px;min-width:25px;font:700 1.25rem var(--monospace);color:var(--accent)}
+.sidebar-btn.active .icon{color:#cce7aa}
+.ux-nav-copy{min-width:0;display:flex;flex-direction:column;gap:2px;flex:1}
+.ux-nav-copy strong{font-size:.83rem;line-height:1.2;letter-spacing:0}
+.ux-nav-copy small{font-size:.72rem;color:#94a992;line-height:1.24;font-weight:450}
+.sidebar-btn.active .ux-nav-copy small{color:#bed4ac}
+.sidebar-btn kbd{font:600 .66rem var(--monospace);padding:2px 6px;border:1px solid #4a5f48;border-radius:4px;color:#9eb19d}
+.sidebar-btn.active kbd{color:#c8deb4;border-color:#779072}
+.ux-nav-footer{font:.69rem/1.7 var(--monospace);color:#93a992;padding:14px 11px 4px}
+.ux-context{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 20px;margin:0 0 12px;background:#1b2820;border:1px solid #405344;border-left:3px solid var(--accent);border-radius:6px}
+.ux-context-eyebrow{font:700 .65rem var(--monospace);letter-spacing:.13em;color:#9bb68f}
+.ux-context h2{font-size:1.13rem;line-height:1.3;margin:3px 0 4px;color:#e8f1df}
+.ux-context p{font-size:.81rem;line-height:1.35;color:#a9b9a5;max-width:640px}
+.ux-context-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.ux-pill{border:1px solid #567253;background:#304335;color:#dcf0cc;padding:8px 11px;border-radius:5px;font:700 .72rem var(--monospace);white-space:nowrap}
+.ux-pill-status{background:#2e321f;border-color:#5c5d41;color:#f2d398}
+.ux-pill-status.is-good{color:#d2edac;background:#2a432d;border-color:#638558}
+.ux-pill-status.is-stale{color:#f2d398;background:#4c4027;border-color:#8e6b3d}
+.ux-actions{margin-bottom:14px;padding:10px 12px;gap:6px}
+.ux-actions .op-btn{padding:9px 12px;min-height:37px;font-size:.75rem}
+.ux-actions .op-note{font-size:.74rem}
+.ux-actions #opFeedback{flex:1 1 100%;margin:2px 1px 0;color:#b9cdae}
+.panel{padding:clamp(16px,2.3vw,28px)}
+.panel h2{font-size:1.22rem}
+.ux-form-intro{color:#b7c9b2!important;font-size:.9rem!important;line-height:1.6!important;margin:0 0 17px!important;max-width:910px}
+.ux-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:15px}
+.ux-steps-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ux-steps button{display:flex;gap:11px;align-items:center;text-align:left;min-height:61px;background:#223128;border:1px solid #476249;border-radius:6px;padding:10px;cursor:pointer;color:#dce9d4;font:inherit}
+.ux-steps button:hover{background:#2d4032;border-color:#96b37c}
+.ux-steps button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ux-steps b{display:flex;justify-content:center;align-items:center;min-width:34px;width:34px;height:34px;border:1px solid #789765;background:#38523a;border-radius:5px;color:#d7ecbb;font:800 .85rem var(--monospace)}
+.ux-steps button span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ux-steps strong{font-size:.83rem;line-height:1.25}
+.ux-steps small{font-size:.71rem;line-height:1.25;color:#a9bdab}
+.ux-format-hint{font-size:.79rem;line-height:1.6;color:#bfd1b3;background:#1a3022;border:1px solid #365b3b;border-radius:5px;padding:10px 13px;margin:0 0 23px}
+.ux-format-hint span{font-size:1rem;color:#cee49e;margin-right:6px}
+.ux-format-hint button{border:0;background:transparent;color:#dbeeb9;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font:inherit}
+.ux-format-hint button:hover{color:white}
+#coords .panel>h3,#manual .panel>h3{margin-top:24px;margin-bottom:12px;display:flex;gap:8px;align-items:center;letter-spacing:.04em}
+.form-group input,.form-group select{min-height:49px}
+.form-group label{font-size:.76rem;letter-spacing:.01em;text-transform:none;color:#d1decc}
+.form-group small{font-size:.74rem}
+.form-group.ux-invalid input,.form-group.ux-invalid select{border-color:#f0a48d!important;box-shadow:0 0 0 2px #f0a48d26!important}
+.ux-field-error{display:block;color:#ffd0bd;font-size:.74rem;margin-top:6px;line-height:1.4}
+.ux-fold{margin:19px 0;border:1px solid #49624b;background:#19291e;border-radius:6px;overflow:clip}
+.ux-fold>summary{display:flex;align-items:center;gap:12px;padding:15px;list-style:none;cursor:pointer;user-select:none;color:#e0eed6}
+.ux-fold>summary::-webkit-details-marker{display:none}
+.ux-fold>summary:hover{background:#273c2a}
+.ux-fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ux-fold-icon{font-size:1.4rem;display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;color:#cbe1b1;background:#304332;border-radius:4px}
+.ux-fold>summary>span:nth-child(2){display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.ux-fold>summary strong{font-size:.89rem;line-height:1.2}
+.ux-fold>summary small{font-size:.76rem;color:#aac0a5;line-height:1.4}
+.ux-chevron{font:700 1.3rem var(--monospace);color:#a9c29e;transition:transform .15s}
+.ux-fold[open]>.ux-chevron,.ux-fold[open]>summary .ux-chevron{transform:rotate(180deg)}
+.ux-fold .correction-card{margin:0;border:0;border-top:1px solid #436146;border-radius:0;box-shadow:none}
+.ux-results-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:15px;padding:11px 12px;background:#1b3021;border:1px solid #476348;border-radius:5px}
+.ux-results-actions span{color:#bbd0b6;font-size:.78rem;flex:1 1 190px}
+.ux-results-actions .op-btn{min-height:38px}
+.ux-results-detail{margin-top:14px}
+.ux-results-detail-body{padding:0 15px 15px}
+.ux-results-detail-body .info-box,.ux-results-detail-body .wind-box,.ux-results-detail-body .vt-box,.ux-results-detail-body .diag-box{margin-top:12px}
+.ux-submit-area{display:grid;grid-template-columns:minmax(190px,1fr) minmax(230px,.95fr);gap:14px;align-items:center;background:#233429;border:1px solid #5a784e;padding:15px;border-radius:6px;margin-top:24px}
+.ux-submit-copy{display:flex;flex-direction:column;gap:3px}
+.ux-submit-copy strong{color:#e8f5e3;font-size:.9rem}
+.ux-submit-copy small{color:#b4c8b1;font-size:.75rem;line-height:1.5}
+.ux-submit-area .calculate-btn{margin:0;min-height:54px;font-size:.88rem;box-shadow:0 3px 0 #536c38,0 5px 15px #0005;letter-spacing:.04em;text-transform:none}
+.ux-submit-area .calculate-btn span{font-size:1.2rem;padding-left:6px}
+.ux-result-hint{font-size:.8rem;margin:10px 0 0;color:#aebfa9;line-height:1.55}
+.ux-result-hint.is-good{color:#d0e8b5}
+.ux-result-hint.is-error{color:#ffc8b0}
+.results-grid{margin-top:17px}
+.result-card{padding:15px!important}
+#coords .panel,#manual .panel{scroll-margin-top:15px}
+.ux-tactical-flow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.ux-tactical-flow span{display:flex;gap:8px;align-items:center;color:#b9cbb4;border:1px solid #3c5543;background:#1b2c20;border-radius:5px;padding:9px 11px;font-size:.78rem}
+.ux-tactical-flow b{border-radius:4px;background:#385239;color:#d8eec0;padding:4px 8px;font:700 .72rem var(--monospace)}
+body.compact-on .ux-header{display:none}
+body.compact-on .sidebar{width:214px}
+body.compact-on .ux-context{padding:9px 12px}
+body.compact-on .ux-steps button{min-height:48px}
+button,select,input{accent-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:1280px){.ux-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.ux-steps-3{grid-template-columns:repeat(3,minmax(0,1fr))}.ux-submit-area{grid-template-columns:1fr}}
+@media(max-width:900px){.sidebar{width:100%!important;position:static}.ux-nav-group,.ux-nav-title,.ux-nav-footer{display:none}.sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.sidebar-btn{margin-bottom:0}.ux-context-pills{justify-content:flex-start}}
+@media(max-width:540px){.ux-steps,.ux-steps-3{grid-template-columns:1fr 1fr}.ux-steps button{padding:8px;min-height:53px}.ux-steps b{min-width:28px;width:28px;height:28px}.ux-header.header{padding:18px}.ux-context{padding:13px}.ux-context-pills{width:100%}.ux-actions .op-btn{flex:1 1 45%}.ux-steps strong{font-size:.78rem}.sidebar{grid-template-columns:1fr 1fr}.sidebar-btn kbd,.ux-nav-copy small{display:none}.sidebar-btn{min-height:44px}.sidebar-btn .icon{min-width:20px;width:20px}}
+@media print{.ux-steps,.ux-context,.ux-format-hint,.ux-nav-footer{display:none!important}}
 </style>
 </head>
 <body>
 <div class="container">
-    <div class="header">
-        <h1>🎯 Универсальный Баллистический Калькулятор</h1>
-        <p>M777 (155мм) • M252 (81мм) • 2Б14 "Поднос" (82мм) • данные из встроенных баллистических таблиц · сверяйте с игровым модом</p>
-    </div>
+    <header class="header ux-header">
+        <div class="ux-brandline"><span class="ux-brand-emblem" aria-hidden="true">◈</span><span class="ux-kicker">ARMA REFORGER / FIRE CONTROL</span><span class="ux-version">3.6.3</span></div>
+        <h1>Панель управления расчётами</h1>
+        <p>Координаты, расчёт, цели и батарея — в одном интерфейсе. Расчёты используют проверенные игровые таблицы.</p>
+    </header>
 
     <div class="app-layout">
-        <div class="sidebar">
-            <button class="sidebar-btn active" onclick="switchTab('coords', event)">
-                <span class="icon">📍</span><span>По координатам</span>
+        <nav class="sidebar" aria-label="Разделы Fire Control">
+            <div class="ux-nav-title">РАБОЧИЕ РЕЖИМЫ</div>
+            <div class="ux-nav-group">РАСЧЁТ</div>
+            <button type="button" class="sidebar-btn active" data-tab="coords" onclick="switchTab('coords', event)" aria-current="page">
+                <span class="icon" aria-hidden="true">⌖</span><span class="ux-nav-copy"><strong>По координатам</strong><small>GRID орудия и цели</small></span><kbd>1</kbd>
             </button>
-            <button class="sidebar-btn" onclick="switchTab('manual', event)">
-                <span class="icon">🎯</span><span>Ручной ввод</span>
+            <button type="button" class="sidebar-btn" data-tab="manual" onclick="switchTab('manual', event)">
+                <span class="icon" aria-hidden="true">◎</span><span class="ux-nav-copy"><strong>Ручной расчёт</strong><small>Дальность и азимут</small></span><kbd>2</kbd>
             </button>
-            <button class="sidebar-btn" onclick="switchTab('tactical', event)">
-                <span class="icon">🗺️</span><span>Тактическая карта</span>
-            </button>
-            <button class="sidebar-btn" onclick="switchTab('windrose', event)">
-                <span class="icon">🌬️</span><span>Роза ветров</span>
-            </button>
-            <button class="sidebar-btn" onclick="switchTab('guide', event)">
-                <span class="icon">📖</span><span>Гайд</span>
-            </button>
-            <button class="sidebar-btn" onclick="switchTab('operations',event)"><span class="icon">▣</span><span>Оперативная панель</span></button>
-            <button class="sidebar-btn" onclick="switchTab('archive',event)"><span class="icon">▤</span><span>История и аудит</span></button>
-        </div>
+            <div class="ux-nav-group">ПЛАНИРОВАНИЕ</div>
+            <button type="button" class="sidebar-btn" data-tab="tactical" onclick="switchTab('tactical', event)"><span class="icon" aria-hidden="true">▦</span><span class="ux-nav-copy"><strong>Тактическая карта</strong><small>Орудия, цели, задачи</small></span><kbd>3</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="windrose" onclick="switchTab('windrose', event)"><span class="icon" aria-hidden="true">✧</span><span class="ux-nav-copy"><strong>Роза ветров</strong><small>Направление и снос</small></span><kbd>4</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="operations" onclick="switchTab('operations',event)"><span class="icon" aria-hidden="true">▤</span><span class="ux-nav-copy"><strong>Сводка расчёта</strong><small>Показатели и схема</small></span><kbd>6</kbd></button>
+            <div class="ux-nav-group">ДАННЫЕ И ПОМОЩЬ</div>
+            <button type="button" class="sidebar-btn" data-tab="archive" onclick="switchTab('archive',event)"><span class="icon" aria-hidden="true">◷</span><span class="ux-nav-copy"><strong>История и обновления</strong><small>Профили, копии, версии</small></span><kbd>7</kbd></button>
+            <button type="button" class="sidebar-btn" data-tab="guide" onclick="switchTab('guide', event)"><span class="icon" aria-hidden="true">?</span><span class="ux-nav-copy"><strong>Руководство</strong><small>Инструкции и советы</small></span><kbd>5</kbd></button>
+            <div class="ux-nav-footer">Alt + номер — переход к разделу<br>F1 — открыть руководство</div>
+        </nav>
 
-        <div class="content">
-            <div class="operation-toolbar" aria-label="Быстрые действия">
+        <main class="content" id="mainContent">
+            <div class="ux-context" aria-live="polite">
+                <div class="ux-context-copy"><div class="ux-context-eyebrow">ТЕКУЩИЙ РАЗДЕЛ</div><h2 id="uxContextTitle">Расчёт по координатам</h2><p id="uxContextDescription">Введите позицию орудия и цели. Остальное программа рассчитает по таблицам.</p></div>
+                <div class="ux-context-pills"><span class="ux-pill" id="uxWeaponPill">M777 · 6400 тыс.</span><span class="ux-pill ux-pill-status" id="uxCalculationStatus" role="status">● Ожидает расчёта</span></div>
+            </div>
+            <div class="operation-toolbar ux-actions" aria-label="Быстрые действия">
                 <button type="button" class="op-btn" id="fcTopUpdateButton" onclick="window.fireControlUpdater.open()" title="Управление обновлениями">↻ Обновления <span id="fcUpdateBadge" aria-live="polite"></span></button>
                 <button type="button" class="op-btn primary" onclick="copyFireSolution()">⎘ Копировать результат</button>
                 <button type="button" class="op-btn" onclick="toggleCompact()" id="compactToggle">▣ Компактный вид</button>
@@ -478,8 +590,15 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
             <!-- TAB: COORDINATES -->
             <div id="coords" class="tab-content active">
                 <div class="panel">
-                    <h2>📍 Наведение по координатам</h2>
-                    <p style="color: #666; margin-bottom: 20px;">Введите координаты орудия и цели для расчёта параметров стрельбы.</p>
+                    <h2>⌖ Расчёт по координатам</h2>
+                    <p class="ux-form-intro">Для расчёта достаточно выбрать орудие и указать две точки GRID. Погодные условия и настройки можно оставить как есть или изменить.</p>
+                    <div class="ux-steps" aria-label="Порядок работы">
+                      <button type="button" onclick="uxJump('weaponType')"><b>01</b><span><strong>Орудие</strong><small>Тип и снаряд</small></span></button>
+                      <button type="button" onclick="uxJump('artX')"><b>02</b><span><strong>Координаты</strong><small>Позиция → цель</small></span></button>
+                      <button type="button" onclick="uxJump('cWindSpd')"><b>03</b><span><strong>Условия</strong><small>Ветер и заряд</small></span></button>
+                      <button type="button" onclick="uxJump('uxCoordsSubmit')"><b>04</b><span><strong>Результат</strong><small>Расчёт и копирование</small></span></button>
+                    </div>
+                    <div class="ux-format-hint"><span aria-hidden="true">ⓘ</span> GRID — координаты до 5 цифр, X направлен на восток, Y — на север. Пустые поля подсвечиваются перед расчётом. <button type="button" onclick="uxGoTab('guide')">Подробнее в руководстве →</button></div>
                     
                     <div class="form-row">
                         <div class="form-group">
@@ -525,27 +644,27 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                     <h3>📌 Позиция орудия</h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>GRID X (Easting)</label>
+                            <label>Координата X · Восток</label>
                             <input type="text" id="artX" value="04770" maxlength="5">
                         </div>
                         <div class="form-group">
-                            <label>GRID Y (Northing)</label>
+                            <label>Координата Y · Север</label>
                             <input type="text" id="artY" value="11902" maxlength="5">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Высота орудия (м)</label>
+                        <label>Высота позиции (м)</label>
                         <input type="number" id="artZ" value="26" step="1">
                     </div>
 
                     <h3>🎯 Цель</h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>GRID X (Easting)</label>
+                            <label>Координата X · Восток</label>
                             <input type="text" id="tgtX" value="07430" maxlength="5">
                         </div>
                         <div class="form-group">
-                            <label>GRID Y (Northing)</label>
+                            <label>Координата Y · Север</label>
                             <input type="text" id="tgtY" value="04740" maxlength="5">
                         </div>
                     </div>
@@ -556,6 +675,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
 
 
                     <!-- Корректировки цели: используются те же функции расчёта -->
+                    <details class="ux-fold" id="uxFold-coords-corrections"><summary><span class="ux-fold-icon" aria-hidden="true">✛</span><span><strong>Точечные поправки по сторонам света</strong><small>Необязательно · открыть для смещения цели, отмены шага и истории поправок</small></span><span class="ux-chevron" aria-hidden="true">⌄</span></summary>
                     <section class="correction-card" aria-labelledby="cCorrTitle">
                         <div class="correction-heading"><h3 id="cCorrTitle">✛ Корректировка точки цели</h3><span class="corr-history-count" id="cCorrCount">0 шагов</span></div>
                         <p class="correction-help">Передайте смещение в метрах по сторонам света. <strong>Восток = +X, запад = −X, север = +Y, юг = −Y.</strong> Можно задать два направления одновременно. Каждый новый шаг применяется к <em>текущей</em> цели, а не к первоначальной.</p>
@@ -588,6 +708,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                         </div>
                         <div class="corr-feedback" id="cCorrFeedback" role="status" aria-live="polite">Поправки применяются к текущим полям цели; результаты и история обновляются после расчёта.</div>
                     </section>
+                    </details>
 
                     <h3>🌬️ Метеоданные</h3>
                     <div class="form-row">
@@ -625,7 +746,11 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                         </div>
                     </div>
 
-                    <button class="calculate-btn" onclick="calculateCoords()">🎯 РАССЧИТАТЬ</button>
+                    <div class="ux-submit-area" id="uxCoordsSubmit">
+                      <div class="ux-submit-copy"><strong>Готовы получить решение?</strong><small>Используются координаты GRID и выбранная таблица.</small></div>
+                      <button type="button" class="calculate-btn" onclick="calculateCoords()">Рассчитать параметры <span aria-hidden="true">→</span></button>
+                    </div>
+                    <p class="ux-result-hint" id="uxCoordsHint" role="status" aria-live="polite">После расчёта здесь появятся угол, заряд, время полёта и азимут.</p>
 
                     <div id="coordsResults" style="display: none;">
                         <div class="results-grid">
@@ -645,7 +770,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                                 <div class="unit">сек</div>
                             </div>
                             <div class="result-card azimuth">
-                                <h3>REQ Азимут</h3>
+                                <h3>REQ азимут · без ветра</h3>
                                 <div class="value" id="cResAz">-</div>
                                 <div class="unit">mils</div>
                             </div>
@@ -656,6 +781,8 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                             </div>
                         </div>
 
+                        <div class="ux-results-actions"><span>Результат можно сразу использовать или открыть в сводке.</span><button type="button" class="op-btn primary" onclick="copyFireSolution()">⎘ Копировать результат</button><button type="button" class="op-btn" onclick="uxGoTab('operations')">▤ Открыть сводку</button></div>
+                        <details class="ux-fold ux-results-detail" id="uxFold-coords-details"><summary><span class="ux-fold-icon" aria-hidden="true">☷</span><span><strong>Показать детали расчёта</strong><small>Ветер, геометрия, VT и диагностика</small></span><span class="ux-chevron" aria-hidden="true">⌄</span></summary><div class="ux-results-detail-body">
                         <div class="vt-box" id="cVtBox" style="display: none;">
                             <strong>💥 Информация о воздушном подрыве:</strong><br>
                             Время подрыва от выстрела: <span id="cVtTime" style="font-weight: bold; font-size: 1.1em;">-</span> сек<br>
@@ -685,6 +812,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                         <div id="cDiagBox" class="diag-box">
                             <strong>🔍 Диагностика:</strong> Орудие(<span id="cDiagArtX"></span>, <span id="cDiagArtY"></span>), Цель(<span id="cDiagTgtX"></span>, <span id="cDiagTgtY"></span>)
                         </div>
+                        </div></details>
                     </div>
                 </div>
             </div>
@@ -692,8 +820,14 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
             <!-- TAB: MANUAL -->
             <div id="manual" class="tab-content">
                 <div class="panel">
-                    <h2>🎯 Ручной ввод параметров</h2>
-                    <p style="color: #666; margin-bottom: 20px;">Введите известные параметры напрямую (например, из разведданных).</p>
+                    <h2>◎ Ручной расчёт</h2>
+                    <p class="ux-form-intro">Когда известны дальность и направление, координаты не нужны. Укажите высоты и условия, затем запустите расчёт.</p>
+                    <div class="ux-steps ux-steps-3" aria-label="Порядок ручного расчёта">
+                      <button type="button" onclick="uxJump('mWeaponType')"><b>01</b><span><strong>Орудие</strong><small>Выбрать тип</small></span></button>
+                      <button type="button" onclick="uxJump('mDist')"><b>02</b><span><strong>Дальность и азимут</strong><small>Ввести значения</small></span></button>
+                      <button type="button" onclick="uxJump('uxManualSubmit')"><b>03</b><span><strong>Рассчитать</strong><small>Получить результат</small></span></button>
+                    </div>
+                    <div class="ux-format-hint"><span aria-hidden="true">ⓘ</span> Здесь азимут вводится в <b>градусах</b>. Итоговый REQ-азимут показывается в тысячных: 6000 для 2Б14 и 6400 для M777/M252.</div>
 
                     <div class="form-row">
                         <div class="form-group">
@@ -747,7 +881,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Высота орудия (м)</label>
+                            <label>Высота позиции (м)</label>
                             <input type="number" id="mArtZ" value="100" step="1">
                         </div>
                         <div class="form-group">
@@ -758,6 +892,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
 
 
                     <!-- Корректировки цели: используются те же функции расчёта -->
+                    <details class="ux-fold" id="uxFold-manual-corrections"><summary><span class="ux-fold-icon" aria-hidden="true">✛</span><span><strong>Ручные поправки по направлениям</strong><small>Необязательно · открыть для смещения цели, отмены шага и истории поправок</small></span><span class="ux-chevron" aria-hidden="true">⌄</span></summary>
                     <section class="correction-card" aria-labelledby="mCorrTitle">
                         <div class="correction-heading"><h3 id="mCorrTitle">✛ Корректировка точки цели</h3><span class="corr-history-count" id="mCorrCount">0 шагов</span></div>
                         <p class="correction-help">Передайте смещение в метрах по сторонам света. <strong>Восток = +X, запад = −X, север = +Y, юг = −Y.</strong> Можно задать два направления одновременно. Каждый новый шаг применяется к <em>текущей</em> цели, а не к первоначальной.</p>
@@ -790,6 +925,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                         </div>
                         <div class="corr-feedback" id="mCorrFeedback" role="status" aria-live="polite">Поправки применяются к текущим полям цели; результаты и история обновляются после расчёта.</div>
                     </section>
+                    </details>
 
                     <div class="form-row">
                         <div class="form-group">
@@ -824,12 +960,16 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                         </div>
                     </div>
 
-                    <button class="calculate-btn" onclick="calculateManual()">🎯 РАССЧИТАТЬ</button>
+                    <div class="ux-submit-area" id="uxManualSubmit">
+                      <div class="ux-submit-copy"><strong>Готовы получить решение?</strong><small>Используются расстояние, азимут и выбранная таблица.</small></div>
+                      <button type="button" class="calculate-btn" onclick="calculateManual()">Рассчитать параметры <span aria-hidden="true">→</span></button>
+                    </div>
+                    <p class="ux-result-hint" id="uxManualHint" role="status" aria-live="polite">После расчёта здесь появятся угол, заряд, время полёта и азимут.</p>
 
                     <div id="manualResults" style="display: none;">
                         <div class="results-grid">
                             <div class="result-card elevation">
-                                <h3>Угол</h3>
+                                <h3>Угол подъёма</h3>
                                 <div class="value" id="mResElev">-</div>
                                 <div class="unit">mils</div>
                             </div>
@@ -839,12 +979,12 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                                 <div class="unit" id="mChargeUnit">Charge</div>
                             </div>
                             <div class="result-card tof">
-                                <h3>Время</h3>
+                                <h3>Время полёта</h3>
                                 <div class="value" id="mResTof">-</div>
                                 <div class="unit">сек</div>
                             </div>
                             <div class="result-card azimuth">
-                                <h3>REQ Азимут</h3>
+                                <h3>REQ азимут · без ветра</h3>
                                 <div class="value" id="mResAz">-</div>
                                 <div class="unit">mils</div>
                             </div>
@@ -854,6 +994,8 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                                 <div class="unit">сек</div>
                             </div>
                         </div>
+                        <div class="ux-results-actions"><span>Результат можно сразу использовать или открыть в сводке.</span><button type="button" class="op-btn primary" onclick="copyFireSolution()">⎘ Копировать результат</button><button type="button" class="op-btn" onclick="uxGoTab('operations')">▤ Открыть сводку</button></div>
+                        <details class="ux-fold ux-results-detail" id="uxFold-manual-details"><summary><span class="ux-fold-icon" aria-hidden="true">☷</span><span><strong>Показать детали расчёта</strong><small>Ветер, VT и параметры траектории</small></span><span class="ux-chevron" aria-hidden="true">⌄</span></summary><div class="ux-results-detail-body">
                         <div class="vt-box" id="mVtBox" style="display: none;">
                             <strong>💥 Таймер подрыва:</strong> <span id="mVtTime" style="font-weight: bold; font-size: 1.1em;">-</span> сек | Высота: <span id="mVtAlt">-</span> м
                         </div>
@@ -864,6 +1006,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
                         <div class="info-box">
                             <strong>ℹ️ Детализация:</strong> Поправка на высоту: <span id="mResSite">-</span> mils | Пик траектории: <span id="mResPeak">-</span> м
                         </div>
+                        </div></details>
                     </div>
                 </div>
             </div>
@@ -871,8 +1014,8 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
             <!-- TAB: TACTICAL MAP -->
             <div id="tactical" class="tab-content">
                 <div class="panel tactical-shell">
-                    <h2>🗺️ Тактическая карта · Command Center 3.5</h2>
-                    <p class="guide-lead">Объединённая тактическая панель для работы с несколькими орудиями, библиотекой целей и историей последних точек. Использует текущее математическое ядро без изменений.</p>
+                    <h2>▦ Тактическая карта и батарея</h2>
+                    <p class="guide-lead">Сохраняйте орудия и цели с понятными названиями, выбирайте их на карте и просматривайте общую таблицу. Карта схематическая: это сетка координат, а не рельеф острова.</p><div class="ux-tactical-flow"><span><b>1</b> Укажите позиции во вкладке «По координатам»</span><span><b>2</b> Сохраните орудие и цель</span><span><b>3</b> Пересчитайте батарею</span></div>
                     <div class="operation-toolbar tactical-toolbar">
                         <input type="text" id="tacWeaponName" class="op-select tac-input" placeholder="Название орудия / позиции">
                         <button type="button" class="op-btn" onclick="tacSaveCurrentWeapon()">＋ Сохранить текущее орудие</button>
@@ -1312,7 +1455,7 @@ body[data-theme="contrast"] .fc-update-panel{background:#111;color:#fff;border-c
     </div>
   </div>
 </div>
-        </div>
+        </main>
     </div>
 
     <div class="footer">
@@ -2642,6 +2785,7 @@ window.desktopBootAndSetup=async function(){
  }
  // Preserve initialization order from the original 3.5 HTML.
  setupOperations();
+ window.uxInit();
  corrSetup();
  if(typeof window.tacSetup==='function')setTimeout(window.tacSetup,0);
  window.desktopNativeSaveEnabled=true;
@@ -2649,6 +2793,161 @@ window.desktopBootAndSetup=async function(){
  window.desktopQueueSave(JSON.stringify(opState));
 };
 window.addEventListener('load',window.desktopBootAndSetup);
+
+/* ===== Fire Control 3.6.3: presentation and validation layer only ===== */
+const uxSections = {
+ coords: ['Расчёт по координатам','Введите GRID орудия и цели, затем получите решение по таблице.'],
+ manual: ['Ручной расчёт','Введите дальность и азимут в градусах.'],
+ tactical: ['Тактическая карта','Выбирайте сохранённые позиции и цели, управляйте батареей.'],
+ windrose: ['Роза ветров','Смотрите направление и влияние ветра в схематичном виде.'],
+ guide: ['Руководство','Откройте инструкцию по каждому разделу приложения.'],
+ operations: ['Сводка расчёта','Основные показатели и условная схема последнего решения.'],
+ archive: ['История и обновления','Сохранённые профили, резервные копии и новые версии.']
+};
+let uxActiveMode='coords';
+let uxInitialized=false;
+let uxLastValidMode=null;
+function uxTab(){return document.querySelector('.tab-content.active')?.id||'coords';}
+function uxSetState(message,kind='idle'){
+ const state=document.getElementById('uxCalculationStatus');
+ if(!state)return;
+ state.textContent=message;
+ state.classList.toggle('is-good',kind==='good');
+ state.classList.toggle('is-stale',kind==='stale');
+}
+function uxUpdateContext(){
+ const tab=uxTab(),info=uxSections[tab]||uxSections.coords;
+ uxActiveMode=tab;
+ document.getElementById('uxContextTitle').textContent=info[0];
+ document.getElementById('uxContextDescription').textContent=info[1];
+ const weapon=document.getElementById('weaponType')?.value||'m777';
+ const names={m777:'M777',m252:'M252','2b14':'2Б14 «Поднос»'};
+ document.getElementById('uxWeaponPill').textContent=`${names[weapon]||weapon} · ${weapon==='2b14'?6000:6400} тыс./круг`;
+ document.querySelectorAll('.sidebar-btn[data-tab]').forEach(button=>{
+   const active=button.dataset.tab===tab;
+   button.classList.toggle('active',active);
+   if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+ });
+}
+function uxGoTab(id){
+ const button=document.querySelector(`.sidebar-btn[data-tab="${id}"]`);
+ if(!button)return;
+ button.click();
+ document.getElementById('mainContent')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function uxJump(id){
+ const element=document.getElementById(id);
+ if(!element)return;
+ const closed=element.closest('details:not([open])');if(closed)closed.open=true;
+ element.scrollIntoView({behavior:'smooth',block:'center'});
+ if(element.matches('input,select')){element.focus({preventScroll:true});}
+}
+function uxInputError(element,message){
+ const wrap=element.closest('.form-group')||element.parentElement;
+ if(!wrap)return;
+ wrap.classList.add('ux-invalid');
+ let note=wrap.querySelector('.ux-field-error');
+ if(!note){note=document.createElement('span');note.className='ux-field-error';note.setAttribute('role','alert');wrap.appendChild(note);}
+ note.textContent=message;
+ element.setAttribute('aria-invalid','true');
+}
+function uxClearInputError(element){
+ const wrap=element.closest('.form-group')||element.parentElement;
+ if(wrap){wrap.classList.remove('ux-invalid');wrap.querySelector('.ux-field-error')?.remove();}
+ element.removeAttribute('aria-invalid');
+}
+function uxCheckFields(mode){
+ const inputs=mode==='coords'?['artX','artY','tgtX','tgtY','artZ','tgtZ','cWindSpd','cWindDir'] : ['mDist','mAz','mArtZ','mTgtZ','mWindSpd','mWindDir'];
+ const weapon=document.getElementById(mode==='coords'?'weaponType':'mWeaponType').value;
+ if(weapon==='m777'){
+   const shell=document.getElementById(mode==='coords'?'m777ShellType':'mM777ShellType').value;
+   if(shell==='vt')inputs.push(mode==='coords'?'burstHeight':'mBurstHeight');
+ }
+ let firstInvalid=null;
+ for(const id of inputs){
+   const el=document.getElementById(id);if(!el)continue;
+   uxClearInputError(el);
+   const raw=el.value.trim();
+   let error='';
+   if(!raw)error='Заполните поле.';
+   else if(/^(artX|artY|tgtX|tgtY)$/.test(id)&& !/^\d{1,5}$/.test(raw))error='Укажите от 1 до 5 цифр GRID.';
+   else if(el.type==='number' && (!Number.isFinite(Number(raw)) || (el.min!=='' && Number(raw)<Number(el.min)) || (el.max!=='' && Number(raw)>Number(el.max))))error='Проверьте допустимый диапазон для этого поля.';
+   if(error){uxInputError(el,error);if(!firstInvalid)firstInvalid=el;}
+ }
+ if(firstInvalid){uxJump(firstInvalid.id);uxSetState('! Проверьте поля','stale');
+   const hint=document.getElementById(mode==='coords'?'uxCoordsHint':'uxManualHint');
+   if(hint){hint.textContent='Исправьте подсвеченные поля и повторите расчёт.';hint.classList.add('is-error');}
+   return false;
+ }
+ return true;
+}
+function uxAfterCalc(mode){
+ const result=document.getElementById(mode==='coords'?'cResElev':'mResElev')?.textContent||'';
+ const good=result.trim()&&result!=='-'&&!result.includes('Вне диапазона')&&result!=='NaN';
+ const hint=document.getElementById(mode==='coords'?'uxCoordsHint':'uxManualHint');
+ if(good){
+   uxLastValidMode=mode;uxSetState('✓ Расчёт готов','good');
+   if(hint){hint.textContent='Готово. Основные параметры показаны ниже. Для ветра, VT и геометрии откройте «Детали расчёта». Копия доступна в панели действий.';hint.classList.remove('is-error');hint.classList.add('is-good');}
+ }else{
+   uxSetState('! Нет решения в таблице','stale');
+   if(hint){hint.textContent='Для выбранных параметров нет решения. Проверьте дальность, орудие, заряд и траекторию.';hint.classList.add('is-error');hint.classList.remove('is-good');}
+ }
+}
+function uxSetupLabels(){
+ const descriptions={
+ 'artX':'Координата X позиции орудия, до 5 цифр. Восток.',
+ 'artY':'Координата Y позиции орудия, до 5 цифр. Север.',
+ 'tgtX':'Координата X цели, до 5 цифр. Восток.',
+ 'tgtY':'Координата Y цели, до 5 цифр. Север.',
+ 'cWindDir':'Направление, откуда дует ветер: 0° = север, 90° = восток.',
+ 'mWindDir':'Направление, откуда дует ветер: 0° = север, 90° = восток.',
+ 'mAz':'Азимут направления на цель в градусах, не в тысячных.',
+ 'mDist':'Расстояние до цели в метрах.',
+ 'chargeSelect':'«Авто» выбирает подходящий вариант по имеющейся таблице.',
+ 'mCharge':'«Авто» выбирает подходящий вариант по имеющейся таблице.'
+ };
+ for(const group of document.querySelectorAll('#coords .form-group,#manual .form-group')){
+   const control=group.querySelector('input:not([type="checkbox"]),select');
+   const label=group.querySelector('label');
+   if(!control||!label)continue;
+   if(!label.htmlFor)label.htmlFor=control.id;
+   if(descriptions[control.id]){control.title=descriptions[control.id];
+     if(!group.querySelector('small')&&!group.querySelector('.corr-direction-note')){
+       const small=document.createElement('small');small.textContent=descriptions[control.id];group.appendChild(small);
+     }
+   }
+ }
+}
+function uxSetupDetails(){
+ for(const fold of document.querySelectorAll('.ux-fold')){
+   const key='firecontrol-ux-fold:'+fold.id;
+   try{fold.open=localStorage.getItem(key)==='true';}catch{}
+   fold.addEventListener('toggle',()=>{try{localStorage.setItem(key,fold.open?'true':'false');}catch{}});
+ }
+}
+window.uxInit=function(){
+ if(uxInitialized)return;uxInitialized=true;
+ uxSetupLabels();uxSetupDetails();
+ // setupOperations installed the persistence/history wrappers first: decorate those, not the solver.
+ const originalCoords=window.calculateCoords,originalManual=window.calculateManual,originalTab=window.switchTab;
+ window.calculateCoords=function(){if(!uxCheckFields('coords'))return;originalCoords();uxAfterCalc('coords');};
+ window.calculateManual=function(){if(!uxCheckFields('manual'))return;originalManual();uxAfterCalc('manual');};
+ window.switchTab=function(tabId,event){originalTab(tabId,event);uxUpdateContext();};
+ for(const mode of ['coords','manual']){
+   const tab=document.getElementById(mode);
+   tab.addEventListener('input',event=>{
+     if(event.target.matches('input,select'))uxClearInputError(event.target);
+     uxSetState('• Данные изменены','stale');
+     const hint=document.getElementById(mode==='coords'?'uxCoordsHint':'uxManualHint');
+     if(hint && uxLastValidMode===mode){hint.textContent='После изменения исходных данных нажмите «Рассчитать параметры» ещё раз.';hint.classList.remove('is-good');}
+   });
+   tab.addEventListener('change',()=>{uxUpdateContext();uxSetState('• Данные изменены','stale');});
+ }
+ document.addEventListener('keydown',event=>{
+   if(event.key==='F1'){event.preventDefault();uxGoTab('guide');}
+ });
+ uxUpdateContext();
+};
 
 </script>
 <script type="module" src="./update-manager.js"></script>
