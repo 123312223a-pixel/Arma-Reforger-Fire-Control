@@ -125,9 +125,22 @@ window.mapAimSelectServerPreset=key=>{
   status('Подложка '+preset.title+' загружается с Enfumap при доступности сервиса. Название пресета не подтверждает текущую ротацию серверов.','mapAimInstruction');
   return;
  }
+ if(key==='ultrv-chasov-yar'){
+  const slug='ultrv-chasov-yar',worldSize=6144;
+  if(!mapCatalogue.has(slug))mapCatalogue.set(slug,{
+   slug,name:'ULTRV · Chasov Yar',worldSize,online:false,checked:true,manual:true
+  });
+  if(st().mapSlug!==slug)window.mapAimChangeMap(slug);
+  const state=st();
+  state.manualMap={slug,name:'ULTRV · Chasov Yar',worldSize,online:false,checked:true,manual:true};
+  state.layer='grid';state.mapAutoOffline=true;
+  $('mapAimLayer').value='grid';
+  opPersist();updateMapMenu();render();onlineLabel();
+  status('Chasov Yar · масштаб рельефа 6144 м (по Terrain.terr). Загрузите PNG через «Своя карта»; проверьте привязку по двум известным точкам GRID. Автовысоты Z недоступны.','mapAimInstruction');
+  return;
+ }
  const descriptions={
-  'ahs-strelechye':'AHS · Strelechye',
-  'ultrv-chasov-yar':'ULTRV · Chasov Yar'
+  'ahs-strelechye':'AHS · Strelechye'
  };
  if(descriptions[key]){
   name.value=descriptions[key];input.value='';
