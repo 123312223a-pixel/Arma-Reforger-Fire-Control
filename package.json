@@ -1,7 +1,7 @@
 {
   "name": "arma-reforger-fire-control",
   "private": true,
-  "version": "3.8.2",
+  "version": "3.8.3",
   "type": "module",
   "description": "Arma Reforger Fire Control Desktop with optional signed auto-update support (Tauri 2)",
   "scripts": {
