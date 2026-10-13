@@ -103,11 +103,9 @@ function installServerPresets(){
  const select=$('mapServerPreset');if(!select)return;
  const names=[
   ['','Выбрать карту сервера…'],
-  ['ultrv-bakhmut-city','ULTRV · Bakhmut City (карта доступна онлайн; сервер не подтверждён)'],
-  ['ultrv-kunar-province','ULTRV · Kunar Province (карта доступна онлайн; сервер уточнить)'],
+  ['ultrv-chasov-yar','ULTRV · Chasov Yar (актуальная карта; свой размер / GRID)'],
   ['ahs-sergeevka','AHS · WCS_Serhiivka (онлайн-подложка местности)'],
   ['ahs-strelechye','AHS · Strelechye (свой размер / GRID)'],
-  ['ultrv-chasov-yar','ULTRV · Chasov Yar (свой размер / GRID)']
  ];
  select.replaceChildren(...names.map(([v,label])=>{
   const option=document.createElement('option');option.value=v;option.textContent=label;return option;
@@ -116,8 +114,6 @@ function installServerPresets(){
 window.mapAimSelectServerPreset=key=>{
  const input=$('mapCustomWorldSize'),name=$('mapCustomWorldName');
  const onlinePresets={
-  'ultrv-bakhmut-city':{slug:'bakhmut-city',title:'Bakhmut City',size:10240},
-  'ultrv-kunar-province':{slug:'kunar-province',title:'Kunar Province',size:4096},
   'ahs-sergeevka':{slug:'wcs-serhiivka',title:'WCS_Serhiivka',size:10240}
  };
  const preset=onlinePresets[key];
@@ -135,7 +131,7 @@ window.mapAimSelectServerPreset=key=>{
  };
  if(descriptions[key]){
   name.value=descriptions[key];input.value='';
-  status('Для '+descriptions[key]+' сначала введите проверенный размер игровой карты в метрах.','mapAimInstruction');
+  status('Для '+descriptions[key]+' введите проверенную длину стороны мира в метрах, затем добавьте карту через поле своей карты. Ресурсы Enfusion .edds/.topo/.terr нельзя загружать как изображения напрямую.','mapAimInstruction');
  }
 };
 window.mapAimAddCustomWorld=()=>{
