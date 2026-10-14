@@ -196,6 +196,8 @@ window.mapAimChangeMap=slug=>{
  ++onlineRequest;++terrainToken;finishTileProbe();
  terrainGrid=null;terrainStatus='idle';terrainError='';onlineInfo=null;offlineReason='';atlasImage=null;atlasSlug='';++atlasToken;
  a.mapSlug=slug;a.image='';a.zoom=1;a.cx=400;a.cy=400;a.tool='gun';
+ // New terrain sources are opt-in until their coordinate alignment has been validated.
+ a.autoZ=slug==='everon'?{gun:true,target:true}:{gun:false,target:false};
  S=validateMapDimensions(mapMeta(slug).worldSize);
  a.worldSize=S;a.refs=fresh().refs;
  $('mapAimImage').value='';
