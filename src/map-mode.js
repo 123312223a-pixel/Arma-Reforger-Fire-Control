@@ -14,6 +14,8 @@ const mapEndpoint='https://enfumap.com';
 const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,{...item,online:null}]));
 mapCatalogue.set('ultrv-chasov-yar',{slug:'ultrv-chasov-yar',name:'ULTRV · Chasov Yar',worldSize:6144,online:false,checked:true,manual:true});
 const CHASOV_YAR_ASSET='./maps/chasov-yar.jpg';
+let chasovAssetAvailable=false;
+function checkChasovAsset(){const test=new Image();test.onload=()=>{chasovAssetAvailable=true;render();onlineLabel();};test.onerror=()=>{chasovAssetAvailable=false;onlineLabel();};test.src=CHASOV_YAR_ASSET;}
 let catalogVerified=false;
 const mapMeta=slug=>mapCatalogue.get(slug)||FALLBACK_REFORGER_MAPS[0];
 const selectedMap=()=>mapMeta(st().mapSlug);
@@ -213,7 +215,7 @@ function onlineLabel(){
  const label=$('mapAimTileState');if(!label)return;
  const state=st();
  if(state.image)label.textContent='Своя карта · сохранена локально';
- else if(state.mapSlug==='ultrv-chasov-yar')label.textContent='Chasov Yar · локальная подложка · Z вручную';
+ else if(state.mapSlug==='ultrv-chasov-yar')label.textContent=chasovAssetAvailable?'Chasov Yar · встроенная подложка · Z вручную':'Chasov Yar · подложка не найдена, доступна GRID / загрузите своё изображение';
  else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
  else if(onlineState==='ready')label.textContent=selectedMap().name+' · карта подключена · Enfumap';
  else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
@@ -495,7 +497,7 @@ function viewport(){const a=st(),size=B/a.zoom;a.cx=clamp(a.cx,size/2,B-size/2);
 function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,v=viewport();svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.size} ${v.size}`);
  svg.replaceChildren(el('rect',{x:0,y:0,width:B,height:B,fill:'#1b3129'}));
  onlineTiles(svg,a,v);
- if(a.mapSlug==='ultrv-chasov-yar'&&!a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:CHASOV_YAR_ASSET,preserveAspectRatio:'none','pointer-events':'none'}));
+ if(a.mapSlug==='ultrv-chasov-yar'&&!a.image&&chasovAssetAvailable)svg.append(el('image',{x:0,y:0,width:B,height:B,href:CHASOV_YAR_ASSET,preserveAspectRatio:'none','pointer-events':'none'}));
  if(a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:a.image,preserveAspectRatio:'none'}));
  drawMinimumRange(svg);
  const tick=z>=8?250:z>=4?500:1000;
@@ -907,7 +909,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();zoomAt(e.deltaY<0?1.25:.8,e.clientX,e.clientY);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();checkChasovAsset();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){
