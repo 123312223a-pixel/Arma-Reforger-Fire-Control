@@ -798,19 +798,58 @@ function place(tool,p){const xyValue=toWorld(p);if(!isxy(xyValue)){status('То�
  const ids=tool==='gun'?['artX','artY']:['tgtX','tgtY'];ids.forEach((id,index)=>{const control=$(id);control.value=Math.round(index?xyValue.y:xyValue.x).toString().padStart(5,'0');control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));});
  syncAutoTerrain();render();solve();if(tool==='gun')window.mapAimSetTool('target');status(tool==='gun'?'Орудие отмечено. Кликните по цели.':'Цель отмечена. Решение рассчитано автоматически, можно переместить любую метку.');
 }
-function down(e){if(![0,1].includes(e.button))return;const p=pointAt(e),a=st();if(!p)return;
- drag={x:e.clientX,y:e.clientY,cx:a.cx,cy:a.cy,pan:e.button===1||a.tool==='pan',moved:false};$('mapAimSvg').setPointerCapture?.(e.pointerId);if(drag.pan)$('mapAimSvg').classList.add('is-moving');e.preventDefault();}
-function move(e){const p=pointAt(e);if(p){const r=toWorld(p);$('mapPointerCoords').textContent=isxy(r)?'GRID '+fmt(r):'Вне карты';}
- if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>5)drag.moved=true;
- if(drag.pan&&drag.moved){const a=st(),box=$('mapAimSvg').getBoundingClientRect(),size=B/a.zoom;a.cx=clamp(drag.cx-dx/box.width*size,size/2,B-size/2);a.cy=clamp(drag.cy-dy/box.height*size,size/2,B-size/2);render();}}
-function up(e){if(!drag)return;const had=drag;drag=null;$('mapAimSvg').classList.remove('is-moving');if(had.pan){if(had.moved)opPersist();return;}if(had.moved)return;
- const p=pointAt(e);if(!p||p.x<0||p.y<0||p.x>B||p.y>B)return;const tool=st().tool;if(tool==='ref1'||tool==='ref2')calibrate(tool,p);else if(tool==='gun'||tool==='target')place(tool,p);
+function down(e){
+ if(![0,1].includes(e.button))return;
+ const p=pointAt(e),a=st();if(!p)return;
+ drag={x:e.clientX,y:e.clientY,cx:a.cx,cy:a.cy,pan:e.button===1||a.tool==='pan',moved:false,button:e.button};
+ $('mapAimSvg').setPointerCapture?.(e.pointerId);
+ if(drag.pan)$('mapAimSvg').classList.add('is-moving');
+ e.preventDefault();
+}
+function move(e){
+ const p=pointAt(e);
+ if(p){const r=toWorld(p);$('mapPointerCoords').textContent=isxy(r)?'GRID '+fmt(r):'Вне карты';}
+ if(!drag)return;
+ const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+ if(Math.hypot(dx,dy)>5)drag.moved=true;
+ if(drag.pan&&drag.moved){
+  const a=st(),box=$('mapAimSvg').getBoundingClientRect(),size=B/a.zoom;
+  a.cx=clamp(drag.cx-dx/box.width*size,size/2,B-size/2);
+  a.cy=clamp(drag.cy-dy/box.height*size,size/2,B-size/2);
+  render();
+ }
+}
+function up(e){
+ if(!drag)return;
+ const had=drag;drag=null;$('mapAimSvg').classList.remove('is-moving');
+ if(had.pan){if(had.moved)opPersist();return;}
+ if(had.moved)return;
+ const p=pointAt(e);if(!p||p.x<0||p.y<0||p.x>B||p.y>B)return;
+ const tool=st().tool;
+ if(tool==='ref1'||tool==='ref2')calibrate(tool,p);
+ else if(tool==='gun'||tool==='target')place(tool,p);
+}
+function zoomAt(factor,clientX,clientY){
+ const a=st(),svg=$('mapAimSvg'),box=svg.getBoundingClientRect();
+ if(!box.width||!box.height)return;
+ const oldSize=B/a.zoom;
+ const relativeX=clamp((clientX-box.left)/box.width,0,1);
+ const relativeY=clamp((clientY-box.top)/box.height,0,1);
+ const anchorX=a.cx+(relativeX-.5)*oldSize;
+ const anchorY=a.cy+(relativeY-.5)*oldSize;
+ const newZoom=clamp(Math.round(a.zoom*factor*100)/100,1,16);
+ if(newZoom===a.zoom)return;
+ a.zoom=newZoom;
+ const size=B/newZoom;
+ a.cx=clamp(anchorX-(relativeX-.5)*size,size/2,B-size/2);
+ a.cy=clamp(anchorY-(relativeY-.5)*size,size/2,B-size/2);
+ render();opPersist();
 }
 window.mapAimSetTool=tool=>{if(!['gun','target','pan','ref1','ref2'].includes(tool))return; if((tool==='ref1'||tool==='ref2')&&!st().image){status('Сначала загрузите свою карту, для онлайн-карты привязка уже известна.');return;}st().tool=tool;opPersist();render();
  status(({gun:'Кликните по месту расположения орудия.',target:'Кликните по месту расположения цели.',pan:'Зажмите левую кнопку и сдвигайте карту.',ref1:'Отметьте на изображении первую известную точку.',ref2:'Отметьте на изображении вторую известную точку.'})[tool]);
  if(tool==='ref1'||tool==='ref2')$('mapAimSvg')?.scrollIntoView({behavior:'instant',block:'center'});
 };
-window.mapAimZoom=factor=>{const a=st();a.zoom=clamp(Math.round(a.zoom*factor*100)/100,1,16);render();opPersist();};
+window.mapAimZoom=factor=>{const box=$('mapAimSvg').getBoundingClientRect();zoomAt(factor,box.left+box.width/2,box.top+box.height/2);};
 window.mapAimResetView=()=>{const a=st();a.zoom=1;a.cx=400;a.cy=400;opPersist();render();};
 window.mapAimChangeWeapon=type=>{if(!['m777','m252','2b14'].includes(type))return;$('weaponType').value=type;updateWeaponUI('weaponType');$('weaponType').dispatchEvent(new Event('change',{bubbles:true}));syncMapWeapons();render();solve();};
 window.mapAimChangeTrajectory=value=>{
@@ -860,8 +899,8 @@ window.mapAimLoadImage=async input=>{const file=input.files?.[0];if(!file)return
 };
 window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;ready=true;
  svg.addEventListener('pointerdown',down);svg.addEventListener('pointermove',move);svg.addEventListener('pointerup',up);
- svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('contextmenu',e=>e.preventDefault());
- svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();window.mapAimZoom(e.deltaY<0?2:.5);},{passive:false});
+ svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('contextmenu',e=>e.preventDefault());
+ svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();zoomAt(e.deltaY<0?1.25:.8,e.clientX,e.clientY);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
  st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
 };
