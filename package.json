@@ -19,7 +19,9 @@
     "check:bundle": "vite build && node scripts/verify-web-bundle.mjs",
     "test:heightmap": "node scripts/test-heightmap.mjs",
     "test:map-catalog": "node scripts/test-map-catalog.mjs",
-    "test:map-range": "node scripts/test-map-range.mjs"
+    "test:map-range": "node scripts/test-map-range.mjs",
+    "test:map-resources": "node scripts/check-map-resources.mjs",
+    "test:map-resources:network": "node scripts/check-map-resources.mjs --network"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
