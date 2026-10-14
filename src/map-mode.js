@@ -18,7 +18,7 @@ let atlasImage=null,atlasSlug='',atlasToken=0;
 function useAtlas(slug){
  const url=mapImageUrl(slug),token=++atlasToken;
  atlasImage=null;atlasSlug='';if(!url){render();onlineLabel();return;}
- const probe=new Image();probe.onload=()=>{if(token!==atlasToken||st().mapSlug!==slug)return;atlasImage=url;atlasSlug=slug;render();onlineLabel();};
+ const probe=new Image();probe.onload=()=>{if(token!==atlasToken||st().mapSlug!==slug)return;atlasImage=url;atlasSlug=slug;if(st().mapAutoOffline&&st().layer==='grid'){st().layer='topo';const field=$('mapAimLayer');if(field)field.value='topo';}render();onlineLabel();};
  probe.onerror=()=>{if(token!==atlasToken)return;atlasImage=null;atlasSlug='';render();onlineLabel();};
  probe.src=url;
 }
@@ -235,7 +235,7 @@ function failOnline(reason){
  st().layer=atlasImage&&atlasSlug===st().mapSlug?'topo':'grid';const select=$('mapAimLayer');if(select)select.value=st().layer;
  try{opPersist();}catch(error){console.warn('Сохранение слоя не удалось:',error);}
  onlineLabel();render();
- status(reason+' Переключено на GRID: отметки и расчёт продолжают работать.','mapAimInstruction');
+ status(reason+(st().layer==='grid'?' Переключено на GRID.':' Используется резервная PNG-подложка.')+' Метки и расчёт доступны.','mapAimInstruction');
 }
 function onlineTiles(svg,a,v){
  if(a.image||a.layer==='grid'||!['tiles','ready'].includes(onlineState)||!onlineInfo?.tiles)return;
@@ -918,7 +918,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();zoomAt(e.deltaY<0?1.25:.8,e.clientX,e.clientY);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();useAtlas(st().mapSlug);void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){
