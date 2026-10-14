@@ -26,7 +26,10 @@ for(const [slug,r] of Object.entries(MAP_RESOURCES)){
   try{
    const response=await fetch(url,{method:'GET',headers:{Range:'bytes=0-1023'},signal:controller.signal});
    const mime=response.headers.get('content-type')||'';
-   const body=new Uint8Array(await response.arrayBuffer());
+   const reader=response.body?.getReader();
+   const part=reader?await reader.read():{value:new Uint8Array()};
+   const body=part.value||new Uint8Array();
+   await reader?.cancel();
    const png=body.length>=8&&[137,80,78,71,13,10,26,10].every((n,i)=>body[i]===n);
    const json=body.length>=1&&(body[0]===91||body[0]===123);
    const pass=response.ok&&(kind==='image'?png:json);
