@@ -32,8 +32,9 @@ function updateMapMenu(){
   return a.name.localeCompare(b.name,'ru');
  });
  const groups=[
-  {text:'🌐 Онлайн-подложки Enfumap',filter:m=>m.online===true},
-  {text:'▦ Только GRID / изображение пользователя',filter:m=>m.online===false},
+  {text:'🗺️ Карты серверов',filter:m=>m.slug==='ultrv-chasov-yar'},
+  {text:'🌐 Онлайн-подложки Enfumap',filter:m=>m.online===true&&m.slug!=='ultrv-chasov-yar'},
+  {text:'▦ Только GRID / изображение пользователя',filter:m=>m.online===false&&m.slug!=='ultrv-chasov-yar'},
   {text:'? Доступность пока не проверена',filter:m=>m.online===null}
  ];
  const nodes=[];
@@ -45,7 +46,7 @@ function updateMapMenu(){
    const option=document.createElement('option');
    option.value=item.slug;
    option.textContent=item.name+' · '+Math.round(item.worldSize).toLocaleString('ru-RU')+' м'+
-    (item.online===true?' · онлайн':item.online===false?' · GRID':' · проверить');
+    (item.slug==='ultrv-chasov-yar'?' · локальная':item.online===true?' · онлайн':item.online===false?' · GRID':' · проверить');
    optgroup.append(option);
   }
   nodes.push(optgroup);
@@ -54,7 +55,7 @@ function updateMapMenu(){
  const label=$('mapWorldInfo'),meta=mapMeta(active);
  if(label)label.textContent=meta.name+' · '+Math.round(S).toLocaleString('ru-RU')+
   ' × '+Math.round(S).toLocaleString('ru-RU')+' м'+
-  (meta.online===true?' · подложка Enfumap':meta.online===false?' · только GRID':' · доступность подложки не проверена')+
+  (active==='ultrv-chasov-yar'?' · встроенная подложка':meta.online===true?' · подложка Enfumap':meta.online===false?' · только GRID':' · доступность подложки не проверена')+
   (meta.author?' · автор: '+meta.author:'')+'.';
  const count=$('mapCatalogStatus');
  const countOnline=items.filter(m=>m.online===true).length;
@@ -138,7 +139,7 @@ window.mapAimSelectServerPreset=key=>{
   state.layer='grid';state.mapAutoOffline=true;
   $('mapAimLayer').value='grid';
   opPersist();updateMapMenu();render();onlineLabel();
-  status('Chasov Yar · встроенная подложка и масштаб 6144 м (по Terrain.terr). Проверьте точную привязку к игровой GRID; Z вводится вручную.','mapAimInstruction');
+  status('Chasov Yar · масштаб 6144 м · координаты подтверждены пользователем · Z вручную.','mapAimInstruction');
   return;
  }
  const descriptions={
@@ -212,7 +213,7 @@ function onlineLabel(){
  const label=$('mapAimTileState');if(!label)return;
  const state=st();
  if(state.image)label.textContent='Своя карта · сохранена локально';
- else if(state.mapSlug==='ultrv-chasov-yar')label.textContent='Chasov Yar · встроенная подложка · Z вручную · привязка требует проверки';
+ else if(state.mapSlug==='ultrv-chasov-yar')label.textContent='Chasov Yar · локальная подложка · Z вручную';
  else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
  else if(onlineState==='ready')label.textContent=selectedMap().name+' · карта подключена · Enfumap';
  else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
