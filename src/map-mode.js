@@ -12,6 +12,8 @@ let tileProbeToken=-1, tileProbe=null, tileWatchdog=null, offlineReason='';
 const mapEndpoint='https://enfumap.com';
 
 const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,{...item,online:null}]));
+mapCatalogue.set('ultrv-chasov-yar',{slug:'ultrv-chasov-yar',name:'ULTRV · Chasov Yar',worldSize:6144,online:false,checked:true,manual:true});
+const CHASOV_YAR_ASSET='./maps/chasov-yar.jpg';
 let catalogVerified=false;
 const mapMeta=slug=>mapCatalogue.get(slug)||FALLBACK_REFORGER_MAPS[0];
 const selectedMap=()=>mapMeta(st().mapSlug);
@@ -103,7 +105,7 @@ function installServerPresets(){
  const select=$('mapServerPreset');if(!select)return;
  const names=[
   ['','Выбрать карту сервера…'],
-  ['ultrv-chasov-yar','ULTRV · Chasov Yar (актуальная карта; свой размер / GRID)'],
+  ['ultrv-chasov-yar','ULTRV · Chasov Yar (локальная подложка; Z вручную)'],
   ['ahs-sergeevka','AHS · WCS_Serhiivka (онлайн-подложка местности)'],
   ['ahs-strelechye','AHS · Strelechye (свой размер / GRID)'],
  ];
@@ -136,7 +138,7 @@ window.mapAimSelectServerPreset=key=>{
   state.layer='grid';state.mapAutoOffline=true;
   $('mapAimLayer').value='grid';
   opPersist();updateMapMenu();render();onlineLabel();
-  status('Chasov Yar · масштаб рельефа 6144 м (по Terrain.terr). Загрузите PNG через «Своя карта»; проверьте привязку по двум известным точкам GRID. Автовысоты Z недоступны.','mapAimInstruction');
+  status('Chasov Yar · встроенная подложка и масштаб 6144 м (по Terrain.terr). Проверьте точную привязку к игровой GRID; Z вводится вручную.','mapAimInstruction');
   return;
  }
  const descriptions={
@@ -210,6 +212,7 @@ function onlineLabel(){
  const label=$('mapAimTileState');if(!label)return;
  const state=st();
  if(state.image)label.textContent='Своя карта · сохранена локально';
+ else if(state.mapSlug==='ultrv-chasov-yar')label.textContent='Chasov Yar · встроенная подложка · Z вручную · привязка требует проверки';
  else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
  else if(onlineState==='ready')label.textContent=selectedMap().name+' · карта подключена · Enfumap';
  else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
@@ -491,6 +494,7 @@ function viewport(){const a=st(),size=B/a.zoom;a.cx=clamp(a.cx,size/2,B-size/2);
 function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,v=viewport();svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.size} ${v.size}`);
  svg.replaceChildren(el('rect',{x:0,y:0,width:B,height:B,fill:'#1b3129'}));
  onlineTiles(svg,a,v);
+ if(a.mapSlug==='ultrv-chasov-yar'&&!a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:CHASOV_YAR_ASSET,preserveAspectRatio:'none','pointer-events':'none'}));
  if(a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:a.image,preserveAspectRatio:'none'}));
  drawMinimumRange(svg);
  const tick=z>=8?250:z>=4?500:1000;
