@@ -189,7 +189,7 @@ window.mapAimChangeMap=slug=>{
  if(a.mapAutoOffline===true&&mapMeta(slug).online!==false){
   a.layer=a.preferredOnlineLayer||'topo';a.mapAutoOffline=false;
  }
- if(isGridOnlyMap(slug)&&a.layer!=='grid'){
+ if(isGridOnlyMap(slug)&&a.layer!=='grid'&&!mapImageUrl(slug)){
   a.preferredOnlineLayer=a.layer;a.layer='grid';a.mapAutoOffline=true;
  }
  // Never carry positions or elevations from one world into another.
@@ -209,7 +209,7 @@ window.mapAimChangeMap=slug=>{
  void terrainFetch();
  useAtlas(slug);
  $('mapAimLayer').value=a.layer;
- if(isGridOnlyMap(slug)){
+ if(isGridOnlyMap(slug)&&!mapImageUrl(slug)){
   offlineReason='Для '+mapMeta(slug).name+' онлайн-подложка недоступна';
   onlineState='offline';onlineLabel();render();
  }else if(a.layer==='grid'){onlineState='offline';onlineLabel();}
@@ -232,7 +232,7 @@ function failOnline(reason){
  finishTileProbe();onlineState='error';offlineReason=reason;
  const state=st();state.mapAutoOffline=true;state.preferredOnlineLayer=state.layer;
  if(st().image){onlineLabel();render();return;}
- st().layer='grid';const select=$('mapAimLayer');if(select)select.value='grid';
+ st().layer=atlasImage&&atlasSlug===st().mapSlug?'topo':'grid';const select=$('mapAimLayer');if(select)select.value=st().layer;
  try{opPersist();}catch(error){console.warn('Сохранение слоя не удалось:',error);}
  onlineLabel();render();
  status(reason+' Переключено на GRID: отметки и расчёт продолжают работать.','mapAimInstruction');
@@ -273,12 +273,13 @@ function onlineTiles(svg,a,v){
 async function loadOnlineMap(force=false){
  const a=st();
  if(a.image){offlineReason='';onlineLabel();render();return;}
- if(isGridOnlyMap(a.mapSlug)){
+ if(isGridOnlyMap(a.mapSlug)&&!mapImageUrl(a.mapSlug)){
   offlineReason='Для '+selectedMap().name+' у Enfumap нет доступной онлайн-подложки';
   a.mapAutoOffline=true;a.layer='grid';$('mapAimLayer').value='grid';
   onlineState='offline';onlineLabel();render();return;
  }
  if(a.layer==='grid'&&!force){onlineState='offline';onlineLabel();render();return;}
+ if(isGridOnlyMap(a.mapSlug)&&mapImageUrl(a.mapSlug)){onlineState='offline';onlineLabel();render();return;}
  const token=++onlineRequest;tileProbeToken=-1;finishTileProbe();onlineInfo=null;
  onlineState='loading';offlineReason='';onlineLabel();render();
  try{
@@ -878,11 +879,11 @@ window.mapAimChangeTrajectory=value=>{
   solve();
 };
 window.mapAimSetHeight=(which,z)=>{if(!['gun','target'].includes(which))return;terrainFlags()[which]=false;const field=$(which==='gun'?'artZ':'tgtZ');field.value=z;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));terrainUi();opPersist();solve();};
-window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();syncAutoTerrain();render();stats();onlineLabel();};
+window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();useAtlas(st().mapSlug);void terrainFetch();syncAutoTerrain();render();stats();onlineLabel();};
 window.mapAimGoOffline=()=>{++onlineRequest;finishTileProbe();offlineReason='';onlineState='offline';const a=st();a.layer='grid';a.mapAutoOffline=false;$('mapAimLayer').value='grid';opPersist();render();onlineLabel();status('GRID-сетка включена. Можно работать без интернета.','mapAimInstruction');};
 window.mapAimRetryOnline=()=>{
  if(st().image){status('Сначала удалите загруженное изображение карты.');return;}
- if(isGridOnlyMap(st().mapSlug)){
+ if(isGridOnlyMap(st().mapSlug)&&!mapImageUrl(st().mapSlug)){
   status('Для '+selectedMap().name+' нет доступной онлайн-подложки. Воспользуйтесь GRID или своим изображением.');return;
  }
  if(st().layer==='grid'){st().layer='topo';$('mapAimLayer').value='topo';}
@@ -891,7 +892,7 @@ window.mapAimRetryOnline=()=>{
 window.mapAimSelectLayer=layer=>{
  if(!['topo','satellite','fogless','grid'].includes(layer))return;
  if(layer==='grid')return window.mapAimGoOffline();
- if(isGridOnlyMap(st().mapSlug)){
+ if(isGridOnlyMap(st().mapSlug)&&!mapImageUrl(st().mapSlug)){
   $('mapAimLayer').value='grid';
   status('Онлайн-слой для '+selectedMap().name+' отсутствует. Можно загрузить свою картинку.');return;
  }
