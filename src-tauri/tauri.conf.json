@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Arma Reforger Fire Control",
-  "version": "3.8.3",
+  "version": "3.8.4",
   "identifier": "com.reforger.firecontrol",
   "mainBinaryName": "arma_reforger_fire_control",
   "build": {
@@ -15,7 +15,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Arma Reforger Fire Control 3.8.3",
+        "title": "Arma Reforger Fire Control 3.8.4",
         "width": 1500,
         "height": 950,
         "minWidth": 1040,
