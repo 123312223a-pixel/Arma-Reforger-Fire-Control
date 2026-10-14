@@ -13,6 +13,33 @@
       "allow": [
         {
           "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/everon_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/arland_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/kolguev_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/anizay_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/gogland_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/kunar_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/saigon_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/takistan_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/zarichne_height.json"
+        },
+        {
+          "url": "https://pub-65310bd5bcd44d68b30addfbacb31e51.r2.dev/height_data/zimnitrita_height.json"
         }
       ]
     }
