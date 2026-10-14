@@ -12,10 +12,6 @@ let tileProbeToken=-1, tileProbe=null, tileWatchdog=null, offlineReason='';
 const mapEndpoint='https://enfumap.com';
 
 const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,{...item,online:null}]));
-mapCatalogue.set('ultrv-chasov-yar',{slug:'ultrv-chasov-yar',name:'ULTRV · Chasov Yar',worldSize:6144,online:false,checked:true,manual:true});
-const CHASOV_YAR_ASSET='./maps/chasov-yar.jpg';
-let chasovAssetAvailable=false;
-function checkChasovAsset(){const test=new Image();test.onload=()=>{chasovAssetAvailable=true;render();onlineLabel();};test.onerror=()=>{chasovAssetAvailable=false;onlineLabel();};test.src=CHASOV_YAR_ASSET;}
 let catalogVerified=false;
 const mapMeta=slug=>mapCatalogue.get(slug)||FALLBACK_REFORGER_MAPS[0];
 const selectedMap=()=>mapMeta(st().mapSlug);
@@ -34,9 +30,8 @@ function updateMapMenu(){
   return a.name.localeCompare(b.name,'ru');
  });
  const groups=[
-  {text:'🗺️ Карты серверов',filter:m=>m.slug==='ultrv-chasov-yar'},
-  {text:'🌐 Онлайн-подложки Enfumap',filter:m=>m.online===true&&m.slug!=='ultrv-chasov-yar'},
-  {text:'▦ Только GRID / изображение пользователя',filter:m=>m.online===false&&m.slug!=='ultrv-chasov-yar'},
+  {text:'🌐 Онлайн-подложки Enfumap',filter:m=>m.online===true},
+  {text:'▦ Только GRID / изображение пользователя',filter:m=>m.online===false},
   {text:'? Доступность пока не проверена',filter:m=>m.online===null}
  ];
  const nodes=[];
@@ -48,7 +43,7 @@ function updateMapMenu(){
    const option=document.createElement('option');
    option.value=item.slug;
    option.textContent=item.name+' · '+Math.round(item.worldSize).toLocaleString('ru-RU')+' м'+
-    (item.slug==='ultrv-chasov-yar'?' · локальная':item.online===true?' · онлайн':item.online===false?' · GRID':' · проверить');
+    (item.online===true?' · онлайн':item.online===false?' · GRID':' · проверить');
    optgroup.append(option);
   }
   nodes.push(optgroup);
@@ -57,7 +52,7 @@ function updateMapMenu(){
  const label=$('mapWorldInfo'),meta=mapMeta(active);
  if(label)label.textContent=meta.name+' · '+Math.round(S).toLocaleString('ru-RU')+
   ' × '+Math.round(S).toLocaleString('ru-RU')+' м'+
-  (active==='ultrv-chasov-yar'?' · встроенная подложка':meta.online===true?' · подложка Enfumap':meta.online===false?' · только GRID':' · доступность подложки не проверена')+
+  (meta.online===true?' · подложка Enfumap':meta.online===false?' · только GRID':' · доступность подложки не проверена')+
   (meta.author?' · автор: '+meta.author:'')+'.';
  const count=$('mapCatalogStatus');
  const countOnline=items.filter(m=>m.online===true).length;
@@ -108,7 +103,7 @@ function installServerPresets(){
  const select=$('mapServerPreset');if(!select)return;
  const names=[
   ['','Выбрать карту сервера…'],
-  ['ultrv-chasov-yar','ULTRV · Chasov Yar (локальная подложка; Z вручную)'],
+  ['ultrv-chasov-yar','ULTRV · Chasov Yar (актуальная карта; свой размер / GRID)'],
   ['ahs-sergeevka','AHS · WCS_Serhiivka (онлайн-подложка местности)'],
   ['ahs-strelechye','AHS · Strelechye (свой размер / GRID)'],
  ];
@@ -141,7 +136,7 @@ window.mapAimSelectServerPreset=key=>{
   state.layer='grid';state.mapAutoOffline=true;
   $('mapAimLayer').value='grid';
   opPersist();updateMapMenu();render();onlineLabel();
-  status('Chasov Yar · масштаб 6144 м · координаты подтверждены пользователем · Z вручную.','mapAimInstruction');
+  status('Chasov Yar · масштаб рельефа 6144 м (по Terrain.terr). Загрузите PNG через «Своя карта»; проверьте привязку по двум известным точкам GRID. Автовысоты Z недоступны.','mapAimInstruction');
   return;
  }
  const descriptions={
@@ -215,7 +210,6 @@ function onlineLabel(){
  const label=$('mapAimTileState');if(!label)return;
  const state=st();
  if(state.image)label.textContent='Своя карта · сохранена локально';
- else if(state.mapSlug==='ultrv-chasov-yar')label.textContent=chasovAssetAvailable?'Chasov Yar · встроенная подложка · Z вручную':'Chasov Yar · подложка не найдена, доступна GRID / загрузите своё изображение';
  else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
  else if(onlineState==='ready')label.textContent=selectedMap().name+' · карта подключена · Enfumap';
  else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
@@ -497,7 +491,6 @@ function viewport(){const a=st(),size=B/a.zoom;a.cx=clamp(a.cx,size/2,B-size/2);
 function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,v=viewport();svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.size} ${v.size}`);
  svg.replaceChildren(el('rect',{x:0,y:0,width:B,height:B,fill:'#1b3129'}));
  onlineTiles(svg,a,v);
- if(a.mapSlug==='ultrv-chasov-yar'&&!a.image&&chasovAssetAvailable)svg.append(el('image',{x:0,y:0,width:B,height:B,href:CHASOV_YAR_ASSET,preserveAspectRatio:'none','pointer-events':'none'}));
  if(a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:a.image,preserveAspectRatio:'none'}));
  drawMinimumRange(svg);
  const tick=z>=8?250:z>=4?500:1000;
@@ -909,7 +902,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();zoomAt(e.deltaY<0?1.25:.8,e.clientX,e.clientY);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();checkChasovAsset();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){
