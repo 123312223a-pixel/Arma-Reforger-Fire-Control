@@ -1,7 +1,8 @@
 import { formatMapTileUrl } from './map-url.mjs';
 import { mapRadius,insideMinimum } from './map-range.mjs';
 import {FALLBACK_REFORGER_MAPS,normalizeMapListing,validateMapDimensions} from './map-catalog.mjs';
-import { EVERON_HEIGHT_URL, packHeightGrid, getTerrainHeight, sampleElevationProfile } from './heightmap.mjs';
+import { packHeightGrid, getTerrainHeight, sampleElevationProfile } from './heightmap.mjs';
+import {mapImageUrl,mapHeightUrl} from './map-resources.mjs';
 import { fetch as nativeHttpFetch } from '@tauri-apps/plugin-http';
 /* v3.7.2 map aiming. No ballistics here; use existing calculateCoords(). */
 (()=>{'use strict';
@@ -13,6 +14,15 @@ const mapEndpoint='https://enfumap.com';
 
 const mapCatalogue=new Map(FALLBACK_REFORGER_MAPS.map(item=>[item.slug,{...item,online:null}]));
 let catalogVerified=false;
+let atlasImage=null,atlasSlug='',atlasToken=0;
+function useAtlas(slug){
+ const url=mapImageUrl(slug),token=++atlasToken;
+ atlasImage=null;atlasSlug='';if(!url){render();onlineLabel();return;}
+ const probe=new Image();probe.onload=()=>{if(token!==atlasToken||st().mapSlug!==slug)return;atlasImage=url;atlasSlug=slug;if(st().mapAutoOffline&&st().layer==='grid'){st().layer='topo';const field=$('mapAimLayer');if(field)field.value='topo';}render();onlineLabel();};
+ probe.onerror=()=>{if(token!==atlasToken)return;atlasImage=null;atlasSlug='';render();onlineLabel();};
+ probe.src=url;
+}
+
 const mapMeta=slug=>mapCatalogue.get(slug)||FALLBACK_REFORGER_MAPS[0];
 const selectedMap=()=>mapMeta(st().mapSlug);
 function isGridOnlyMap(slug){
@@ -179,13 +189,15 @@ window.mapAimChangeMap=slug=>{
  if(a.mapAutoOffline===true&&mapMeta(slug).online!==false){
   a.layer=a.preferredOnlineLayer||'topo';a.mapAutoOffline=false;
  }
- if(isGridOnlyMap(slug)&&a.layer!=='grid'){
+ if(isGridOnlyMap(slug)&&a.layer!=='grid'&&!mapImageUrl(slug)){
   a.preferredOnlineLayer=a.layer;a.layer='grid';a.mapAutoOffline=true;
  }
  // Never carry positions or elevations from one world into another.
  ++onlineRequest;++terrainToken;finishTileProbe();
- terrainGrid=null;terrainStatus='idle';terrainError='';onlineInfo=null;offlineReason='';
+ terrainGrid=null;terrainStatus='idle';terrainError='';onlineInfo=null;offlineReason='';atlasImage=null;atlasSlug='';++atlasToken;
  a.mapSlug=slug;a.image='';a.zoom=1;a.cx=400;a.cy=400;a.tool='gun';
+ // New terrain sources are opt-in until their coordinate alignment has been validated.
+ a.autoZ=slug==='everon'?{gun:true,target:true}:{gun:false,target:false};
  S=validateMapDimensions(mapMeta(slug).worldSize);
  a.worldSize=S;a.refs=fresh().refs;
  $('mapAimImage').value='';
@@ -196,9 +208,10 @@ window.mapAimChangeMap=slug=>{
  clearWorldCoordinates();
  if(typeof opCapture==='function')opState.inputs=opCapture();
  opPersist();updateMapMenu();terrainUi();render();solve();
- if(slug==='everon')void terrainFetch();
+ void terrainFetch();
+ useAtlas(slug);
  $('mapAimLayer').value=a.layer;
- if(isGridOnlyMap(slug)){
+ if(isGridOnlyMap(slug)&&!mapImageUrl(slug)){
   offlineReason='Для '+mapMeta(slug).name+' онлайн-подложка недоступна';
   onlineState='offline';onlineLabel();render();
  }else if(a.layer==='grid'){onlineState='offline';onlineLabel();}
@@ -210,6 +223,7 @@ function onlineLabel(){
  const label=$('mapAimTileState');if(!label)return;
  const state=st();
  if(state.image)label.textContent='Своя карта · сохранена локально';
+ else if(atlasImage&&atlasSlug===state.mapSlug&&state.layer!=='grid'&&onlineState!=='ready')label.textContent=selectedMap().name+' · резервная PNG-подложка · GeNeFRAG';
  else if(state.layer==='grid')label.textContent=(offlineReason||'GRID · офлайн')+' · сетка доступна';
  else if(onlineState==='ready')label.textContent=selectedMap().name+' · карта подключена · Enfumap';
  else if(onlineState==='loading'||onlineState==='tiles')label.textContent='Загрузка карты… · GRID доступна';
@@ -220,10 +234,10 @@ function failOnline(reason){
  finishTileProbe();onlineState='error';offlineReason=reason;
  const state=st();state.mapAutoOffline=true;state.preferredOnlineLayer=state.layer;
  if(st().image){onlineLabel();render();return;}
- st().layer='grid';const select=$('mapAimLayer');if(select)select.value='grid';
+ st().layer=atlasImage&&atlasSlug===st().mapSlug?'topo':'grid';const select=$('mapAimLayer');if(select)select.value=st().layer;
  try{opPersist();}catch(error){console.warn('Сохранение слоя не удалось:',error);}
  onlineLabel();render();
- status(reason+' Переключено на GRID: отметки и расчёт продолжают работать.','mapAimInstruction');
+ status(reason+(st().layer==='grid'?' Переключено на GRID.':' Используется резервная PNG-подложка.')+' Метки и расчёт доступны.','mapAimInstruction');
 }
 function onlineTiles(svg,a,v){
  if(a.image||a.layer==='grid'||!['tiles','ready'].includes(onlineState)||!onlineInfo?.tiles)return;
@@ -261,12 +275,13 @@ function onlineTiles(svg,a,v){
 async function loadOnlineMap(force=false){
  const a=st();
  if(a.image){offlineReason='';onlineLabel();render();return;}
- if(isGridOnlyMap(a.mapSlug)){
+ if(isGridOnlyMap(a.mapSlug)&&!mapImageUrl(a.mapSlug)){
   offlineReason='Для '+selectedMap().name+' у Enfumap нет доступной онлайн-подложки';
   a.mapAutoOffline=true;a.layer='grid';$('mapAimLayer').value='grid';
   onlineState='offline';onlineLabel();render();return;
  }
  if(a.layer==='grid'&&!force){onlineState='offline';onlineLabel();render();return;}
+ if(isGridOnlyMap(a.mapSlug)&&mapImageUrl(a.mapSlug)){onlineState='offline';onlineLabel();render();return;}
  const token=++onlineRequest;tileProbeToken=-1;finishTileProbe();onlineInfo=null;
  onlineState='loading';offlineReason='';onlineLabel();render();
  try{
@@ -302,7 +317,8 @@ async function loadOnlineMap(force=false){
 
 // Optional terrain-height channel: independent of map imagery and ballistic tables.
 // The GeNeFRAG CDN file is fetched once, converted to Float32 and cached in IndexedDB.
-const TERRAIN_DB='fire-control-terrain-v1',TERRAIN_KEY='everon-height-grid';
+const TERRAIN_DB='fire-control-terrain-v1';
+const terrainKey=()=>st().mapSlug+'-height-grid';
 let terrainGrid=null,terrainStatus='idle',terrainToken=0,terrainError='';
 function terrainFlags() {
   const state=st();
@@ -314,10 +330,10 @@ function terrainFlags() {
 function terrainMessage() {
   const label=$('mapHeightState');if(!label)return;
   if (st().image) label.textContent='Своя карта: автоматическая высота отключена (доступна ручная Z).';
-  else if (st().mapSlug!=='everon')label.textContent='Для '+selectedMap().name+' высоты пока не подключены. Вводите Z вручную; рельеф Эверона не применяется.';
-  else if (terrainStatus==='ready'&&terrainGrid) label.textContent='Рельеф Эверона подключён · шаг ≈'+
+  else if (!mapHeightUrl(st().mapSlug))label.textContent='Для '+selectedMap().name+' нет проверенного набора высот · используйте ручную Z.';
+  else if (terrainStatus==='ready'&&terrainGrid) label.textContent='Рельеф '+selectedMap().name+' подключён · шаг ≈'+
     Math.round(S/terrainGrid.cols)+' м · сохранён локально · Z поверхности';
-  else if (terrainStatus==='loading') label.textContent='Загружаем высоты Эверона… ручные Z пока сохранены.';
+  else if (terrainStatus==='loading') label.textContent='Загружаем высоты '+selectedMap().name+'… ручные Z пока сохранены.';
   else if (terrainStatus==='error') label.textContent='Рельеф недоступен: '+terrainError+
     '. Введите Z вручную или загрузите JSON.';
   else label.textContent='Высоты не загружены. Можно использовать ручные Z.';
@@ -326,13 +342,13 @@ function terrainUi() {
   for (const kind of ['gun','target']) {
     const id=kind==='gun'?'mapGunZ':'mapTargetZ';
     const check=$(kind==='gun'?'mapAutoGunZ':'mapAutoTargetZ');
-    if(check){check.checked=terrainFlags()[kind];check.disabled=st().mapSlug!=='everon';}
-    const input=$(id);if(input)input.readOnly=!!(st().mapSlug==='everon'&&terrainFlags()[kind]&&terrainGrid&&!st().image);
+    if(check){check.checked=terrainFlags()[kind];check.disabled=!mapHeightUrl(st().mapSlug);}
+    const input=$(id);if(input)input.readOnly=!!(!!mapHeightUrl(st().mapSlug)&&terrainFlags()[kind]&&terrainGrid&&!st().image);
   }
   terrainMessage();
 }
 function autoHeight(kind) {
-  if (st().mapSlug!=='everon'||!terrainGrid||st().image||!terrainFlags()[kind])return false;
+  if (!mapHeightUrl(st().mapSlug)||!terrainGrid||st().image||!terrainFlags()[kind])return false;
   const p=xy(kind);if(!p)return false;
   const z=getTerrainHeight(terrainGrid,p.x,p.y,S);
   if(z===null||!Number.isFinite(z))return false;
@@ -362,7 +378,7 @@ async function terrainCacheRead(){
     db=await openTerrainDb();
     const result=await new Promise((resolve,reject)=>{
       const transaction=db.transaction('maps','readonly');
-      const request=transaction.objectStore('maps').get(TERRAIN_KEY);
+      const request=transaction.objectStore('maps').get(terrainKey());
       request.onsuccess=()=>resolve(request.result||null);
       request.onerror=()=>reject(request.error||Error('Ошибка чтения кэша'));
     });
@@ -378,7 +394,7 @@ async function terrainCacheWrite(grid){
     db=await openTerrainDb();
     await new Promise((resolve,reject)=>{
       const transaction=db.transaction('maps','readwrite');
-      transaction.objectStore('maps').put(grid,TERRAIN_KEY);
+      transaction.objectStore('maps').put(grid,terrainKey());
       transaction.oncomplete=()=>resolve();
       transaction.onerror=()=>reject(transaction.error||Error('Ошибка записи'));
     });
@@ -389,12 +405,13 @@ function setTerrain(grid,reason){
   terrainGrid=grid;terrainStatus='ready';terrainError='';terrainUi();
   const changed=syncAutoTerrain();
   if(changed&&xy('gun')&&xy('target'))solve();else stats();
-  status('Высоты Эверона доступны ('+reason+'). Автоматическое Z можно выключить отдельно для каждой точки.','mapAimInstruction');
+  status('Высоты '+selectedMap().name+' доступны ('+reason+'). Автоматическое Z можно выключить отдельно для каждой точки.','mapAimInstruction');
 }
 async function terrainFetch(force=false){
-  if(st().mapSlug!=='everon'){terrainGrid=null;terrainStatus='idle';terrainUi();return;}
+  if(!mapHeightUrl(st().mapSlug)){terrainGrid=null;terrainStatus='idle';terrainUi();return;}
   const token=++terrainToken;
   if(terrainGrid&&!force){terrainUi();return;}
+  const sourceSlug=st().mapSlug,sourceUrl=mapHeightUrl(sourceSlug);
   terrainStatus='loading';terrainError='';terrainUi();
   if(!force){
     const cached=await terrainCacheRead();
@@ -409,7 +426,7 @@ async function terrainFetch(force=false){
     let response,transport='браузерный HTTPS',nativeError='';
     if(window.__TAURI_INTERNALS__?.invoke){
       try{
-        response=await nativeHttpFetch(EVERON_HEIGHT_URL,{
+        response=await nativeHttpFetch(sourceUrl,{
           method:'GET',connectTimeout:15000,signal:controller.signal
         });
         transport='нативный HTTPS (без CORS)';
@@ -420,7 +437,7 @@ async function terrainFetch(force=false){
     }
     if(!response){
       try{
-        response=await fetch(EVERON_HEIGHT_URL,{cache:'force-cache',signal:controller.signal});
+        response=await fetch(sourceUrl,{cache:'force-cache',signal:controller.signal});
       }catch(error){
         if(nativeError)throw Error('Нативный HTTPS: '+nativeError+'; браузер: '+String(error?.message||error));
         throw error;
@@ -431,7 +448,7 @@ async function terrainFetch(force=false){
     if(length>90000000)throw Error('Файл больше 90 МБ');
     const raw=await response.json();
     const grid=packHeightGrid(raw);
-    if(token!==terrainToken)return;
+    if(token!==terrainToken||st().mapSlug!==sourceSlug)return;
     setTerrain(grid,'с сервера · '+transport);void terrainCacheWrite(grid);
   }catch(error){
     if(token!==terrainToken)return;
@@ -442,7 +459,7 @@ async function terrainFetch(force=false){
 window.mapAimLoadTerrain=()=>void terrainFetch(true);
 window.mapAimImportTerrain=async input=>{
   const file=input.files?.[0];if(!file)return;
-  if(st().mapSlug!=='everon'){status('Импорт высот Эверона доступен только на карте Эверон.');input.value='';return;}
+  if(!mapHeightUrl(st().mapSlug)){status('Для этой карты набор высот не найден.');input.value='';return;}
   try{
     if(file.size>90000000)throw Error('Файл высот больше 90 МБ');
     const parsed=JSON.parse(await file.text());
@@ -490,6 +507,7 @@ function status(message,id='mapAimInstruction'){const x=$(id);if(x)x.textContent
 function viewport(){const a=st(),size=B/a.zoom;a.cx=clamp(a.cx,size/2,B-size/2);a.cy=clamp(a.cy,size/2,B-size/2);return {x:a.cx-size/2,y:a.cy-size/2,size};}
 function render(){const svg=$('mapAimSvg');if(!svg)return;const a=st(),z=a.zoom,v=viewport();svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.size} ${v.size}`);
  svg.replaceChildren(el('rect',{x:0,y:0,width:B,height:B,fill:'#1b3129'}));
+ if(atlasImage&&atlasSlug===a.mapSlug&&a.layer!=='grid'&&onlineState!=='ready'&&!a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:atlasImage,preserveAspectRatio:'none','pointer-events':'none'}));
  onlineTiles(svg,a,v);
  if(a.image)svg.append(el('image',{x:0,y:0,width:B,height:B,href:a.image,preserveAspectRatio:'none'}));
  drawMinimumRange(svg);
@@ -863,11 +881,11 @@ window.mapAimChangeTrajectory=value=>{
   solve();
 };
 window.mapAimSetHeight=(which,z)=>{if(!['gun','target'].includes(which))return;terrainFlags()[which]=false;const field=$(which==='gun'?'artZ':'tgtZ');field.value=z;field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));terrainUi();opPersist();solve();};
-window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();syncAutoTerrain();render();stats();onlineLabel();};
+window.mapAimRecalculate=solve;window.mapAimRefresh=()=>{if(!ready)return window.mapAimInit();st();useAtlas(st().mapSlug);void terrainFetch();syncAutoTerrain();render();stats();onlineLabel();};
 window.mapAimGoOffline=()=>{++onlineRequest;finishTileProbe();offlineReason='';onlineState='offline';const a=st();a.layer='grid';a.mapAutoOffline=false;$('mapAimLayer').value='grid';opPersist();render();onlineLabel();status('GRID-сетка включена. Можно работать без интернета.','mapAimInstruction');};
 window.mapAimRetryOnline=()=>{
  if(st().image){status('Сначала удалите загруженное изображение карты.');return;}
- if(isGridOnlyMap(st().mapSlug)){
+ if(isGridOnlyMap(st().mapSlug)&&!mapImageUrl(st().mapSlug)){
   status('Для '+selectedMap().name+' нет доступной онлайн-подложки. Воспользуйтесь GRID или своим изображением.');return;
  }
  if(st().layer==='grid'){st().layer='topo';$('mapAimLayer').value='topo';}
@@ -876,7 +894,7 @@ window.mapAimRetryOnline=()=>{
 window.mapAimSelectLayer=layer=>{
  if(!['topo','satellite','fogless','grid'].includes(layer))return;
  if(layer==='grid')return window.mapAimGoOffline();
- if(isGridOnlyMap(st().mapSlug)){
+ if(isGridOnlyMap(st().mapSlug)&&!mapImageUrl(st().mapSlug)){
   $('mapAimLayer').value='grid';
   status('Онлайн-слой для '+selectedMap().name+' отсутствует. Можно загрузить свою картинку.');return;
  }
@@ -902,7 +920,7 @@ window.mapAimInit=()=>{if(ready)return;const svg=$('mapAimSvg');if(!svg)return;r
  svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('is-moving');});svg.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});svg.addEventListener('contextmenu',e=>e.preventDefault());
  svg.addEventListener('wheel',e=>{if(!svg.closest('.tab-content.active'))return;e.preventDefault();zoomAt(e.deltaY<0?1.25:.8,e.clientX,e.clientY);},{passive:false});
  ['input','change'].forEach(ev=>$('coords').addEventListener(ev,event=>{if($('mapaim').classList.contains('active')){if(['artX','artY','tgtX','tgtY'].includes(event.target?.id))syncAutoTerrain();render();stats();}},true));
- st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();void terrainFetch();loadOnlineMap();
+ st().refs.forEach((r,i)=>{$(`mapRef${i+1}X`).value=r.x;$(`mapRef${i+1}Y`).value=r.y;});$('mapAimLayer').value=st().layer;updateMapMenu();installServerPresets();void discoverMaps();syncMapWeapons();render();stats();terrainUi();useAtlas(st().mapSlug);void terrainFetch();loadOnlineMap();
 };
 function ensureMapStarted(){
  try{window.mapAimInit();}catch(error){
